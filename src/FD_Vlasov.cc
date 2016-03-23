@@ -1,20 +1,53 @@
+#include "Array.hh"
 #include "FD_Vlasov.hh"
 
 FD_Vlasov::
-FD_Vlasov(int number_of_cells,
+FD_Vlasov(int number_of_points,
           int number_of_groups,
           int number_of_ordinates,
           int number_of_time_steps,
-          double time_step):
-    number_of_cells_(number_of_cells),
+          int dump_number,
+          double time_step,
+          Array<double> magnetic_field,
+          Array<double> angle,
+          Array<double> position,
+          Array<double> velocity,
+          Array<double> initial_density):
+    number_of_points_(number_of_points),
     number_of_groups_(number_of_groups),
     number_of_ordinates_(number_of_ordinates),
-    number_of_elements_(number_of_cells * number_of_groups * number_of_ordinates),
-    number_of_time_steps_(number_of_time_steps)
+    number_of_elements_(number_of_points * number_of_groups * number_of_ordinates),
+    number_of_time_steps_(number_of_time_steps),
+    dump_number_(dump_number),
+    magnetic_field_(magnetic_field),
+    angle_(angle),
+    position_(position),
+    velocity_(velocity),
+    angle_length_(get_length(number_of_angles,
+                             angle)),
+    position_length_(get_length(number_of_points, 
+                                position)),
+    velocity_length_(get_length(number_of_groups,
+                                velocity))
+    density_(initial_density)
 {
     number_of_entries_per_row_.resize(number_of_elements(), 7);
 
     initialize_trilinos();
+}
+
+Array<double> FD_Vlasov::
+get_length(int number,
+           Array<double> &array)
+{
+    Array<double> length(number - 1);
+    
+    for (unsigned i = 0; i < number - 1; ++i)
+    {
+        length(i) = array(i + 1) - array(i);
+    }
+    
+    return length;
 }
 
 void FD_Vlasov::
@@ -83,8 +116,23 @@ fill_rhs();
 }
 
 void FD_Vlasov::
+calculate_charge_density()
+{
+    
+}
+
+void FD_Vlasov::
+calculate_electric_field()
+{
+    
+}
+
+void FD_Vlasov::
 calculate_force()
 {
+    calculate_charge_density();
+    calculate_eletric_field();
+
     
 }
 
