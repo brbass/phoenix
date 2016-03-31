@@ -40,7 +40,8 @@ public:
     Array(vector<int> const size);
     Array(vector<T> const &data, 
           vector<int> const size);
-    
+ 
+    void resize(int const size);
     void resize(vector<int> const size);
     void assign(vector<int> const size, T const value);
     void set_description(string const description);
@@ -56,7 +57,7 @@ public:
     
     int subscript_to_index(vector<int> const subscript);
     vector<int> index_to_subscript(int const index);
-        
+    
     int size() const
     {
         return size_;
@@ -156,6 +157,15 @@ Array(vector<T> const &data,
     resize(size);
     
     data_ = data;
+}
+
+template<class T> void Array<T>::
+resize(int const size)
+{
+    number_of_dimensions_ = 1;
+    total_size_ = size;
+    size_.assign(1, size);
+    data_.resize(total_size_);
 }
 
 template<class T> void Array<T>::
