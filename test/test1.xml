@@ -1,0 +1,29 @@
+<?xml version="1.0"?>
+
+<input>
+  <point_discretization>
+    <number_of_points>5</number_of_points>
+    <point_distance>0.25</point_distance>
+  </point_discretization>
+  <velocity_discretization>
+    <number_of_velocities>5</number_of_velocities>
+    <velocity_distance>0.25</velocity_distance>
+  </velocity_discretization>
+  <angle_discretization>
+    <number_of_angles>5</number_of_angles>
+  </angle_discretization>
+  <time_discretization>
+    <number_of_time_steps>10</number_of_time_steps>
+    <time_step>0.1</time_step>
+  </time_discretization>
+  <data>
+    <magnetic_field>
+      <type>constant</type>
+      <value>0</value>
+    </magnetic_field>
+    <initial_density>
+      <type>constant</type>
+      <value>1</value>
+    </intitial_density>
+  </data>
+</input>

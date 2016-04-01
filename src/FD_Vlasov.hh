@@ -1,13 +1,14 @@
 #ifndef FD_Vlasov_hh
 #define FD_Vlasov_hh
 
+#include <cmath>
 #include <memory>
+#include <numeric>
 #include <string>
 #include <vector>
 
-#include <Amesos.h>
+// #include <Amesos.h>
 #include <AztecOO.h>
-#include <AztecOO_Version.h>
 // #ifdef EPETRA_MPI
 // #  include <mpi.h>
 // #  include <Epetra_MpiComm.h>
@@ -19,13 +20,14 @@
 #include <Epetra_Vector.h>
 #include <Epetra_LinearProblem.h>
 
-#include "Array.hh"
+#include "pugixml.hpp"
 
+using std::floor;
 using std::string;
 using std::unique_ptr;
 using std::vector;
 
-class FD_Vlasov_hh
+class FD_Vlasov
 {
 private:
 
@@ -47,51 +49,53 @@ private:
     double const q_ = 1;
     double const qm_ = 1;
 
-    Array<double> position_;
-    Array<double> velocity_;
-    Array<double> angle_;
+    vector<double> position_;
+    vector<double> velocity_;
+    vector<double> angle_;
     
-    Array<double> electric_field_;
-    Array<double> magnetic_field_;
-    Array<double> charge_density_;
+    vector<double> electric_field_;
+    vector<double> magnetic_field_;
+    vector<double> charge_density_;
     
-    Array<double> density_;
-    Array<double> mean_density_;
+    vector<double> density_;
+    vector<double> mean_density_;
 
     const int index_base_ = 0;
 
     vector<int> number_of_entries_per_row_;
-    vector<int> small_number_of_entries_per_row_;
+    vector<int> charge_number_of_entries_per_row_;
     
-    string solver_type_ = "Klu";
-    Amesos factory_;
+    // string solver_type_ = "Klu";
+    // Amesos factory_;
+    int max_iterations_ = 5000;
+    double tolerance_ = 1e-6;
 
     unique_ptr<Epetra_SerialComm> comm_;
-    unique_ptr<Epectra_Map> map_;
+    unique_ptr<Epetra_Map> map_;
     unique_ptr<Epetra_CrsMatrix> matrix_;
     unique_ptr<Epetra_Vector> lhs_;
     unique_ptr<Epetra_Vector> rhs_;
     unique_ptr<Epetra_LinearProblem> problem_;
-    unique_ptr<Amesos_BaseSolver> solver_;
+    // unique_ptr<Amesos_BaseSolver> solver_;
+    unique_ptr<AztecOO> solver_;
 
-    unique_ptr<Epetra_SerialComm> small_comm_;
-    unique_ptr<Epectra_Map> small_map_;
-    unique_ptr<Epetra_CrsMatrix> small_matrix_;
-    unique_ptr<Epetra_Vector> small_lhs_;
-    unique_ptr<Epetra_Vector> small_rhs_;
-    unique_ptr<Epetra_LinearProblem> small_problem_;
-    
-    unique_ptr<Amesos_BaseSolver> small_solver_;
+    unique_ptr<Epetra_SerialComm> charge_comm_;
+    unique_ptr<Epetra_Map> charge_map_;
+    unique_ptr<Epetra_CrsMatrix> charge_matrix_;
+    unique_ptr<Epetra_Vector> charge_lhs_;
+    unique_ptr<Epetra_Vector> charge_rhs_;
+    unique_ptr<Epetra_LinearProblem> charge_problem_;
+    // unique_ptr<Amesos_BaseSolver> charge_solver_;
+    unique_ptr<AztecOO> charge_solver_;
 
+    void parse_xml();
+    void initialize_trilinos();
     void fill_matrix();
-    void fill_lhs();
-    void fill_rhs();
+    void fill_charge_matrix();
     
     void calculate_charge_density();
     void calculate_electric_field();
-    
-    void step();
-    void solve();
+    void calculate_density();
 
     int check_point(int p);
     int check_velocity(int g);
@@ -101,20 +105,32 @@ private:
     double velocity_constant(int p, int g, int o);
     double angle_constant(int p, int g, int o);
     
+    void dump_xml(int i, double t);
+
     int subscript_to_index(int p, int g, int o)
     {
-        return o + number_of_angles * (g + number_of_velocities * p);
+        return o + number_of_angles_ * (g + number_of_velocities_ * p);
     }
+    
+    void index_to_subscript(int n, vector<int> &subscript)
+    {
+        int product = number_of_velocities_*number_of_angles_;
+        int sum = n;
+        
+        subscript[0] = floor(static_cast<double>(sum) / (number_of_velocities_ * number_of_angles_));
+        sum -= number_of_velocities_ * number_of_angles_ * subscript[0];
+        subscript[1] = floor(static_cast<double>(sum) / number_of_angles_);
+        sum -= number_of_angles_ * subscript[1];
+        subscript[2] = sum;
+    }
+
     
 public:
     
-    FD_Vlasov(int number_of_cells,
-              int number_of_velocities,
-              int number_of_angles,
-              int number_of_time_steps);
-
-    void solve();
+    FD_Vlasov(string input_path);
     
-}
+    void check_class_invariants();
+    void solve();
+};
 
 #endif
