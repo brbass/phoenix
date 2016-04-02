@@ -94,7 +94,7 @@ parse_xml()
     velocity_.resize(number_of_velocities_);
     for (int i = 0; i < number_of_velocities_; ++i)
     {
-        velocity_[i] = i * velocity_distance_;
+        velocity_[i] = (i + 1) * velocity_distance_;
     }
     
     angle_.resize(number_of_angles_);
@@ -148,8 +148,22 @@ initialize_trilinos()
     // initialize matrix for density solves
     //
 
+    // periodic boundary conditions for angle and space mean that the only variation in
+    // the number of entries per row is due to the velocity dirichlet boundary conditions
+    // f_j = 0 for j = -1, number_of_velocities
     number_of_entries_per_row_.resize(number_of_elements_, 7);
+    for (int i = 0; i < number_of_points_; ++i)
+    {
+        for (int k = 0; k < number_of_angles_; ++k)
+        {
+            int njm = subscript_to_index(i, 0, k);
+            int njp = subscript_to_index(i, number_of_velocities_ - 1, k);
 
+            number_of_entries_per_row_[njm] -= 1;
+            number_of_entries_per_row_[njp] -= 1;
+        }
+    }
+    
     // initialize communications classes
 
     comm_ = unique_ptr<Epetra_SerialComm> (new Epetra_SerialComm);
@@ -233,25 +247,39 @@ fill_matrix()
         int nkm = subscript_to_index(i, j, km1);
         int nkp = subscript_to_index(i, j, kp1);
         
-        vector<int> column_indices(number_of_entries_per_row_[l], 0);
-        vector<double> fill_vector(number_of_entries_per_row_[l], 0);
+        vector<int> column_indices;
+        vector<double> fill_vector;
         
-        column_indices[0] = nim;
-        column_indices[1] = njm;
-        column_indices[2] = nkm;
-        column_indices[3] = n;
-        column_indices[4] = nkp;
-        column_indices[5] = njp;
-        column_indices[6] = nip;
-        
-        fill_vector[0] = -spatial_constant(j, k) / (2 * point_distance_);
-        fill_vector[1] = -velocity_constant(i, jm1, k) / (2 * velocity_distance_);
-        fill_vector[2] = -angle_constant(i, j, km1) / (2 * angle_distance_);
-        fill_vector[3] = 2 / time_step_;
-        fill_vector[4] = angle_constant(i, j, kp1) / (2 * angle_distance_);
-        fill_vector[5] = velocity_constant(i, jp1, k) / (2 * velocity_distance_);
-        fill_vector[6] = spatial_constant(j, k) / (2 * point_distance_);
+        column_indices.push_back(nim);
+        fill_vector.push_back(-spatial_constant(j, k) / (2 * point_distance_));
 
+        if (j != 0)
+        {
+            column_indices.push_back(njm);
+            fill_vector.push_back(-velocity_constant(i, jm1, k) / (2 * velocity_distance_));
+        }
+        
+        column_indices.push_back(nkm);
+        fill_vector.push_back(-angle_constant(i, j, km1) / (2 * angle_distance_));
+        
+        column_indices.push_back(n);
+        fill_vector.push_back(2 / time_step_);
+        
+        column_indices.push_back(nkp);
+        fill_vector.push_back(angle_constant(i, j, kp1) / (2 * angle_distance_));
+
+        if (j != number_of_velocities_ - 1)
+        {
+            column_indices.push_back(njp);
+            fill_vector.push_back(velocity_constant(i, jp1, k) / (2 * velocity_distance_));
+        }
+        
+        column_indices.push_back(nip);
+        fill_vector.push_back(spatial_constant(j, k) / (2 * point_distance_));
+
+        Check(column_indices.size() == number_of_entries_per_row_[l], "column_indices size");
+        Check(fill_vector.size() == number_of_entries_per_row_[l], "fill_vector size");
+        
         // insert values into the matrix for the lhs
         if (matrix_->Filled())
         {
