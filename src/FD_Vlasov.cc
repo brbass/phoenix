@@ -70,11 +70,18 @@ parse_xml()
     
     // discretization information
 
+    pugi::xml_node solver_node = input.child("solver");
     pugi::xml_node point_node = input.child("point_discretization");
     pugi::xml_node velocity_node = input.child("velocity_discretization");
     pugi::xml_node angle_node = input.child("angle_discretization");
     pugi::xml_node time_node = input.child("time_discretization");
     
+    max_iterations_ = child_value<int>(solver_node, "max_iterations");
+    tolerance_ = child_value<double>(solver_node, "tolerance");
+    solver_print_ = child_value<int>(solver_node, "print");
+    kspace_ = child_value<int>(solver_node, "kspace");
+    poly_ord_ = child_value<int>(solver_node, "poly_ord");
+
     number_of_points_ = child_value<int>(point_node, "number_of_points");
     number_of_velocities_ = child_value<int>(velocity_node, "number_of_velocities");
     number_of_angles_ = child_value<int>(angle_node, "number_of_angles");
@@ -132,6 +139,21 @@ parse_xml()
         double constant_density = child_value<double>(initial_density, "value");
         density_.resize(number_of_elements_, constant_density);
     }
+    else if (initial_density_type == "monodirectional")
+    {
+        double monodirectional_density = child_value<double>(initial_density, "value");
+        int k = child_value<int>(initial_density, "direction");
+        
+        density_.assign(number_of_elements_, 0);
+        for (unsigned i = 0; i < number_of_points_; ++i)
+        {
+            for (unsigned j = 0; j < number_of_velocities_; ++j)
+            {
+                int n = subscript_to_index(i, j, k);
+                density_[n] = monodirectional_density;
+            }
+        }
+    }
     else
     {
         AssertMsg(false, "initial_density type not found");
@@ -186,10 +208,13 @@ initialize_trilinos()
     solver_ = unique_ptr<AztecOO> (new AztecOO(*problem_));
 
     solver_->SetAztecOption(AZ_precond, AZ_Jacobi);
-    solver_->SetAztecOption(AZ_poly_ord, 3);
+    solver_->SetAztecOption(AZ_poly_ord, poly_ord_);
     solver_->SetAztecOption(AZ_solver, AZ_gmres);
-    solver_->SetAztecOption(AZ_kspace, 1000);
-    solver_->SetAztecOption(AZ_output, AZ_none);
+    solver_->SetAztecOption(AZ_kspace, kspace_);
+    if (!solver_print_)
+    {
+        solver_->SetAztecOption(AZ_output, AZ_none);
+    }
 
     //
     // initialize matrix for charge density solves
@@ -217,9 +242,13 @@ initialize_trilinos()
     charge_solver_ = unique_ptr<AztecOO> (new AztecOO(*charge_problem_));
 
     charge_solver_->SetAztecOption(AZ_precond, AZ_Jacobi);
-    charge_solver_->SetAztecOption(AZ_poly_ord, 3);
+    charge_solver_->SetAztecOption(AZ_poly_ord, poly_ord_);
     charge_solver_->SetAztecOption(AZ_solver, AZ_gmres);
-    charge_solver_->SetAztecOption(AZ_kspace, 1000);
+    charge_solver_->SetAztecOption(AZ_kspace, kspace_);
+    if (!solver_print_)
+    {
+        charge_solver_->SetAztecOption(AZ_output, AZ_none);
+    }
 }
 
 /*

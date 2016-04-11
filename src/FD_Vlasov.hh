@@ -69,6 +69,9 @@ private:
     
     int max_iterations_ = 5000;
     double tolerance_ = 1e-6;
+    int solver_print_;
+    int kspace_;
+    int poly_ord_;
 
 #ifdef EPETRA_MPI
     unique_ptr<Epetra_MpiComm> comm_;

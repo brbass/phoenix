@@ -1,30 +1,38 @@
 <?xml version="1.0"?>
 
 <input>
+  <solver>
+    <max_iterations>5000</max_iterations>
+    <tolerance>1e-6</tolerance>
+    <kspace>1000</kspace>
+    <poly_ord>3</poly_ord>
+    <print>0</print>
+  </solver>
   <point_discretization>
     <number_of_points>10</number_of_points>
-    <point_distance>0.25</point_distance>
+    <point_distance>0.1</point_distance>
   </point_discretization>
   <velocity_discretization>
     <number_of_velocities>10</number_of_velocities>
-    <velocity_distance>0.25</velocity_distance>
+    <velocity_distance>0.1</velocity_distance>
   </velocity_discretization>
   <angle_discretization>
     <number_of_angles>10</number_of_angles>
   </angle_discretization>
   <time_discretization>
     <number_of_time_steps>10</number_of_time_steps>
-    <time_step>0.1</time_step>
+    <time_step>0.01</time_step>
     <dump_number>1</dump_number>
   </time_discretization>
   <data>
     <magnetic_field>
       <type>constant</type>
-      <value>0</value>
+      <value>1</value>
     </magnetic_field>
     <initial_density>
-      <type>constant</type>
+      <type>monodirectional</type>
       <value>1</value>
+      <direction>0</direction>
     </initial_density>
   </data>
 </input>
