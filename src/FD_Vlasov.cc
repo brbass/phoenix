@@ -177,10 +177,8 @@ initialize_trilinos()
     fill_matrix();
     
     problem_ = unique_ptr<Epetra_LinearProblem> (new Epetra_LinearProblem(matrix_.get(), lhs_.get(), rhs_.get()));
-    // solver_ = unique_ptr<Amesos_BaseSolver> (factory_.Create(solver_type_, *problem_));
     solver_ = unique_ptr<AztecOO> (new AztecOO(*problem_));
 
-    // solver_->SymbolicFactorization();
     solver_->SetAztecOption(AZ_precond, AZ_Jacobi);
     solver_->SetAztecOption(AZ_poly_ord, 3);
     solver_->SetAztecOption(AZ_solver, AZ_gmres);
@@ -205,10 +203,8 @@ initialize_trilinos()
     fill_charge_matrix();
     
     charge_problem_ = unique_ptr<Epetra_LinearProblem> (new Epetra_LinearProblem(charge_matrix_.get(), charge_lhs_.get(), charge_rhs_.get()));
-    // charge_solver_ = unique_ptr<Amesos_BaseSolver> (factory_.Create(solver_type_, *charge_problem_));
     charge_solver_ = unique_ptr<AztecOO> (new AztecOO(*charge_problem_));
 
-    // charge_solver_->SymbolicFactorization();
     charge_solver_->SetAztecOption(AZ_precond, AZ_Jacobi);
     charge_solver_->SetAztecOption(AZ_poly_ord, 3);
     charge_solver_->SetAztecOption(AZ_solver, AZ_gmres);
@@ -249,33 +245,42 @@ fill_matrix()
         
         vector<int> column_indices;
         vector<double> fill_vector;
-        
+        double rhs_sum = 0;
+        double value;
+
         column_indices.push_back(nim);
         fill_vector.push_back(-spatial_constant(j, k) / (2 * point_distance_));
-
+        rhs_sum += fill_vector.back() * density_[nim];
+        
         if (j != 0)
         {
             column_indices.push_back(njm);
             fill_vector.push_back(-velocity_constant(i, jm1, k) / (2 * velocity_distance_));
+            rhs_sum -= fill_vector.back() * density_[njm];
         }
         
         column_indices.push_back(nkm);
         fill_vector.push_back(-angle_constant(i, j, km1) / (2 * angle_distance_));
+        rhs_sum -= fill_vector.back() * density_[nkm];
         
         column_indices.push_back(n);
         fill_vector.push_back(2 / time_step_);
+        rhs_sum -= fill_vector.back() * density_[n];
         
         column_indices.push_back(nkp);
         fill_vector.push_back(angle_constant(i, j, kp1) / (2 * angle_distance_));
-
+        rhs_sum -= fill_vector.back() * density_[nkp];
+        
         if (j != number_of_velocities_ - 1)
         {
             column_indices.push_back(njp);
             fill_vector.push_back(velocity_constant(i, jp1, k) / (2 * velocity_distance_));
+            rhs_sum -= fill_vector.back() * density_[njp];
         }
         
         column_indices.push_back(nip);
         fill_vector.push_back(spatial_constant(j, k) / (2 * point_distance_));
+        rhs_sum -= fill_vector.back() * density_[nip];
 
         Check(column_indices.size() == number_of_entries_per_row_[l], "column_indices size");
         Check(fill_vector.size() == number_of_entries_per_row_[l], "fill_vector size");
@@ -291,16 +296,6 @@ fill_matrix()
         }
         
         // insert values into the rhs
-        double sum = 0;
-        sum += fill_vector[0] * density_[nim];
-        sum += fill_vector[1] * density_[njm];
-        sum += fill_vector[2] * density_[nkm];
-        sum += fill_vector[3] * density_[n];
-        sum += fill_vector[4] * density_[nkp];
-        sum += fill_vector[5] * density_[njp];
-        sum += fill_vector[6] * density_[nip];
-        sum += 2 * density_[n] / time_step_;
-        
         int num_entries = 1;
         vector<int> global_index = {n};
         vector<double> fill_value = {sum};
@@ -311,7 +306,6 @@ fill_matrix()
     {
         matrix_->FillComplete();
     }
-    // lhs_->PutScalar(1.0);
 }
 
 /* 
@@ -358,7 +352,6 @@ fill_charge_matrix()
     {
         charge_matrix_->FillComplete();
     }
-    // charge_lhs_->PutScalar(1.0);
 }
 
 /* 
@@ -418,8 +411,6 @@ calculate_electric_field()
 {
     fill_charge_matrix();
     
-    // charge_solver_->NumericFactorization();
-    // charge_solver_->Solve();
     charge_solver_->Iterate(max_iterations_, tolerance_);
 
     charge_lhs_->ExtractCopy(&electric_field_[0]);
@@ -433,8 +424,6 @@ calculate_density()
 {
     fill_matrix();
     
-    // solver_->NumericFactorization();
-    // solver_->Solve();
     solver_->Iterate(max_iterations_, tolerance_);
     
     lhs_->ExtractCopy(&density_[0]);
