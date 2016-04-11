@@ -1,6 +1,10 @@
 #include <iostream>
 #include <string>
 
+#ifdef EPETRA_MPI
+#  include "mpi.h"
+#endif
+
 #include "FD_Vlasov.hh"
 
 using namespace std;

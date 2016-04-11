@@ -35,13 +35,13 @@ check_class_invariants()
 {
     Assert(number_of_elements_ == number_of_points_ * number_of_velocities_ * number_of_angles_);
 
-    Assert(electric_field_.size() == number_of_points_);
-    Assert(magnetic_field_.size() == number_of_points_);
-    Assert(charge_density_.size() == number_of_points_);
-
     Assert(position_.size() == number_of_points_);
     Assert(velocity_.size() == number_of_velocities_);
     Assert(angle_.size() == number_of_angles_);
+
+    Assert(electric_field_.size() == number_of_points_);
+    Assert(magnetic_field_.size() == number_of_points_);
+    Assert(charge_density_.size() == number_of_points_);
 
     Assert(density_.size() == number_of_elements_);
     Assert(mean_density_.size() == number_of_points_ * number_of_velocities_);
@@ -189,6 +189,7 @@ initialize_trilinos()
     solver_->SetAztecOption(AZ_poly_ord, 3);
     solver_->SetAztecOption(AZ_solver, AZ_gmres);
     solver_->SetAztecOption(AZ_kspace, 1000);
+    solver_->SetAztecOption(AZ_output, AZ_none);
 
     //
     // initialize matrix for charge density solves
@@ -260,7 +261,7 @@ fill_matrix()
 
         column_indices.push_back(nim);
         fill_vector.push_back(-spatial_constant(j, k) / (2 * point_distance_));
-        rhs_sum += fill_vector.back() * density_[nim];
+        rhs_sum -= fill_vector.back() * density_[nim];
         
         if (j != 0)
         {
@@ -275,7 +276,7 @@ fill_matrix()
         
         column_indices.push_back(n);
         fill_vector.push_back(2 / time_step_);
-        rhs_sum -= fill_vector.back() * density_[n];
+        rhs_sum += fill_vector.back() * density_[n];
         
         column_indices.push_back(nkp);
         fill_vector.push_back(angle_constant(i, j, kp1) / (2 * angle_distance_));
@@ -328,7 +329,6 @@ fill_charge_matrix()
     {
         int i = l;
 
-        // THERE'S AN ERROR HERE IF number_of_points_ > number_of_velocities_
         vector<int> column_indices(charge_number_of_entries_per_row_[l], 0);
         vector<double> fill_vector(charge_number_of_entries_per_row_[l], 0);
         
@@ -387,7 +387,7 @@ calculate_charge_density()
                 sum += (angle_[k + 1] - angle_[k]) * (density_[n] + density_[nkp]) / 2;
             }
      
-            int n = j + number_of_points_ * i;
+            int n = j + number_of_velocities_ * i;
             
             mean_density_[n] = sum;
         }
@@ -401,8 +401,8 @@ calculate_charge_density()
         
         for (int j = 0; j < number_of_velocities_ - 1; ++j)
         {
-            int n = j + number_of_points_ * i;
-            int njp = j + 1 + number_of_points_ * i;
+            int n = j + number_of_velocities_ * i;
+            int njp = j + 1 + number_of_velocities_ * i;
 
             double vj = velocity_[j];
             double vjp1 = velocity_[j + 1];
@@ -448,7 +448,6 @@ solve()
 {
     calculate_charge_density();
     calculate_electric_field();
-    calculate_density();
 
     initial_xml();
 
