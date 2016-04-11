@@ -2,10 +2,42 @@
 #include <stdexcept>
 #include <string>
 
-void Check(bool condition, std::string message)
+namespace ch_ns
 {
-    if (!condition)
+    using namespace std;
+    
+    void check(std::string condition,
+               std::string file,
+               int line)
     {
-        throw std::runtime_error(message);
+        cerr << "condition \"";
+        cerr << condition;
+        cerr << "\" failed on line";
+        cerr << line;
+        cerr << " of \"";
+        cerr << file;
+        cerr << "\"";
+        cerr << endl;
+    
+        throw runtime_error("check");
+    }
+
+    void check(std::string condition,
+               std::string message,
+               std::string file,
+               int line)
+    {
+        cerr << "condition \"";
+        cerr << condition;
+        cerr << "\" failed with error \"";
+        cerr << message;
+        cerr << "\" on line ";
+        cerr << line;
+        cerr << " of \"";
+        cerr << file;
+        cerr << "\"";
+        cerr << endl;
+    
+        throw runtime_error("check");
     }
 }

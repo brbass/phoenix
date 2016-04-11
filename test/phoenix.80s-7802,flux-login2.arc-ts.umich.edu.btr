@@ -1,0 +1,16 @@
+
+phoenix:7802 terminated with signal 6 at PC=3613032625 SP=7fff8a21fdb8.  Backtrace:
+/lib64/libc.so.6(gsignal+0x35)[0x3613032625]
+/lib64/libc.so.6(abort+0x175)[0x3613033e05]
+/usr/cac/rhel6/gcc-4.7.2/lib64/libstdc++.so.6(_ZN9__gnu_cxx27__verbose_terminate_handlerEv+0x11d)[0x2ba9d90fcd6d]
+/usr/cac/rhel6/gcc-4.7.2/lib64/libstdc++.so.6(+0x5de66)[0x2ba9d90fae66]
+/usr/cac/rhel6/gcc-4.7.2/lib64/libstdc++.so.6(+0x5de93)[0x2ba9d90fae93]
+/usr/cac/rhel6/gcc-4.7.2/lib64/libstdc++.so.6(+0x5e0be)[0x2ba9d90fb0be]
+/home/brbass/research/phoenix/build/phoenix(_Z5CheckbSs+0x4d)[0x4223e9]
+/home/brbass/research/phoenix/build/phoenix(_Z11child_valueISsET_RN4pugi8xml_nodeESsb+0xd3)[0x42ac10]
+/home/brbass/research/phoenix/build/phoenix(_Z11child_valueIiET_RN4pugi8xml_nodeESsb+0x43)[0x42accf]
+/home/brbass/research/phoenix/build/phoenix(_ZN9FD_Vlasov9parse_xmlEv+0x451)[0x4234af]
+/home/brbass/research/phoenix/build/phoenix(_ZN9FD_VlasovC2ESs+0x231)[0x42268d]
+/home/brbass/research/phoenix/build/phoenix(main+0xaa)[0x45850a]
+/lib64/libc.so.6(__libc_start_main+0xfd)[0x361301ed5d]
+/home/brbass/research/phoenix/build/phoenix[0x422269]

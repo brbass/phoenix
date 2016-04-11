@@ -9,18 +9,20 @@
 
 // #include <Amesos.h>
 #include <AztecOO.h>
-// #ifdef EPETRA_MPI
-// #  include <mpi.h>
-// #  include <Epetra_MpiComm.h>
-// #else
+#ifdef EPETRA_MPI
+#  include <mpi.h>
+#  include <Epetra_MpiComm.h>
+#else
 # include <Epetra_SerialComm.h>
-// #endif
+#endif
 #include <Epetra_Map.h>
 #include <Epetra_CrsMatrix.h>
 #include <Epetra_Vector.h>
 #include <Epetra_LinearProblem.h>
 
 #include "pugixml.hpp"
+
+#include "Check.hh"
 
 using std::floor;
 using std::string;
@@ -65,27 +67,31 @@ private:
     vector<int> number_of_entries_per_row_;
     vector<int> charge_number_of_entries_per_row_;
     
-    // string solver_type_ = "Klu";
-    // Amesos factory_;
     int max_iterations_ = 5000;
     double tolerance_ = 1e-6;
 
+#ifdef EPETRA_MPI
+    unique_ptr<Epetra_MpiComm> comm_;
+#else
     unique_ptr<Epetra_SerialComm> comm_;
+#endif
     unique_ptr<Epetra_Map> map_;
     unique_ptr<Epetra_CrsMatrix> matrix_;
     unique_ptr<Epetra_Vector> lhs_;
     unique_ptr<Epetra_Vector> rhs_;
     unique_ptr<Epetra_LinearProblem> problem_;
-    // unique_ptr<Amesos_BaseSolver> solver_;
     unique_ptr<AztecOO> solver_;
 
+#ifdef EPETRA_MPI
+    unique_ptr<Epetra_MpiComm> charge_comm_;
+#else
     unique_ptr<Epetra_SerialComm> charge_comm_;
+#endif
     unique_ptr<Epetra_Map> charge_map_;
     unique_ptr<Epetra_CrsMatrix> charge_matrix_;
     unique_ptr<Epetra_Vector> charge_lhs_;
     unique_ptr<Epetra_Vector> charge_rhs_;
     unique_ptr<Epetra_LinearProblem> charge_problem_;
-    // unique_ptr<Amesos_BaseSolver> charge_solver_;
     unique_ptr<AztecOO> charge_solver_;
 
     void parse_xml();
@@ -104,8 +110,10 @@ private:
     double spatial_constant(int g, int o);
     double velocity_constant(int p, int g, int o);
     double angle_constant(int p, int g, int o);
-    
+
+    void initial_xml();
     void dump_xml(int i, double t);
+    void save_xml();
 
     int subscript_to_index(int p, int g, int o)
     {
@@ -114,6 +122,8 @@ private:
     
     void index_to_subscript(int n, vector<int> &subscript)
     {
+        Check(subscript.size() == 3);
+
         int product = number_of_velocities_*number_of_angles_;
         int sum = n;
         

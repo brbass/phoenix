@@ -21,7 +21,7 @@ start()
 {
     if (going_)
     {
-        Check(false, "timer already running");
+        CheckMsg(false, "timer already running");
     }
     
     start_time_ = high_resolution_clock::now();
@@ -33,7 +33,7 @@ stop()
 {
     if (!going_)
     {
-        Check(false, "timer is not running");
+        CheckMsg(false, "timer is not running");
     }
 
     end_time_ = high_resolution_clock::now();
@@ -48,7 +48,7 @@ time()
 {
     if (!timed_)
     {
-        Check(false, "timer has not run");
+        CheckMsg(false, "timer has not run");
     }
     
     return elapsed_time_.count();
@@ -59,7 +59,7 @@ print_time()
 {
     if (!timed_)
     {
-        Check(false, "timer has not run");
+        CheckMsg(false, "timer has not run");
     }
 
     cout << setprecision(10) << elapsed_time_.count() << endl;

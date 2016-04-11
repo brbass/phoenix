@@ -2,11 +2,11 @@
 
 <input>
   <point_discretization>
-    <number_of_points>5</number_of_points>
+    <number_of_points>10</number_of_points>
     <point_distance>0.25</point_distance>
   </point_discretization>
   <velocity_discretization>
-    <number_of_velocities>5</number_of_velocities>
+    <number_of_velocities>9</number_of_velocities>
     <velocity_distance>0.25</velocity_distance>
   </velocity_discretization>
   <angle_discretization>
@@ -15,6 +15,7 @@
   <time_discretization>
     <number_of_time_steps>10</number_of_time_steps>
     <time_step>0.1</time_step>
+    <dump_number>1</dump_number>
   </time_discretization>
   <data>
     <magnetic_field>

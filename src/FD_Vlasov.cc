@@ -23,6 +23,8 @@ FD_Vlasov(string input_path):
     parse_xml();
     initialize_trilinos();
     check_class_invariants();
+    solve();
+    save_xml();
 }
 
 /* 
@@ -31,21 +33,21 @@ FD_Vlasov(string input_path):
 void FD_Vlasov::
 check_class_invariants()
 {
-    Check(number_of_elements_ == number_of_points_ * number_of_velocities_ * number_of_angles_, "number_of_elements");
+    Assert(number_of_elements_ == number_of_points_ * number_of_velocities_ * number_of_angles_);
 
-    Check(electric_field_.size() == number_of_points_, "electric_field size");
-    Check(magnetic_field_.size() == number_of_points_, "magnetic_field size");
-    Check(charge_density_.size() == number_of_points_, "charge_density size");
+    Assert(electric_field_.size() == number_of_points_);
+    Assert(magnetic_field_.size() == number_of_points_);
+    Assert(charge_density_.size() == number_of_points_);
 
-    Check(position_.size() == number_of_points_, "position size");
-    Check(velocity_.size() == number_of_velocities_, "velocity size");
-    Check(angle_.size() == number_of_angles_, "angle size");
+    Assert(position_.size() == number_of_points_);
+    Assert(velocity_.size() == number_of_velocities_);
+    Assert(angle_.size() == number_of_angles_);
 
-    Check(density_.size() == number_of_elements_, "density size");
-    Check(mean_density_.size() == number_of_points_ * number_of_velocities_, "mean_density size");
+    Assert(density_.size() == number_of_elements_);
+    Assert(mean_density_.size() == number_of_points_ * number_of_velocities_);
 
-    Check(number_of_entries_per_row_.size() == number_of_elements_, "number_of_entries_per_row size");
-    Check(charge_number_of_entries_per_row_.size() == number_of_points_, "charge_number_of_entries_per_row size");
+    Assert(number_of_entries_per_row_.size() == number_of_elements_);
+    Assert(charge_number_of_entries_per_row_.size() == number_of_points_);
 }
 
 /*
@@ -61,7 +63,7 @@ parse_xml()
     
     if (!doc.load_file(input_path_.c_str()))
     {
-        Check(false, "could not open document");
+        AssertMsg(false, "could not open document");
     }
     
     pugi::xml_node input = doc.child("input");
@@ -119,7 +121,7 @@ parse_xml()
     }
     else
     {
-        Check(false, "magnetic_field type not found");
+        AssertMsg(false, "magnetic_field type not found");
     }
 
     charge_density_.resize(number_of_points_, 0);
@@ -132,7 +134,7 @@ parse_xml()
     }
     else
     {
-        Check(false, "initial_density type not found");
+        AssertMsg(false, "initial_density type not found");
     }
     
     mean_density_.resize(number_of_points_ * number_of_velocities_, 0);
@@ -166,7 +168,11 @@ initialize_trilinos()
     
     // initialize communications classes
 
+#ifdef EPETRA_MPI
+    comm_ = unique_ptr<Epetra_MpiComm> (new Epetra_MpiComm(MPI_COMM_WORLD));
+#else
     comm_ = unique_ptr<Epetra_SerialComm> (new Epetra_SerialComm);
+#endif
     map_ = unique_ptr<Epetra_Map> ( new Epetra_Map(number_of_elements_, index_base_, *comm_));
 
     // initialize and fill matrix
@@ -192,8 +198,12 @@ initialize_trilinos()
 
     // initialize communications classes
 
+#ifdef EPETRA_MPI
+    charge_comm_ = unique_ptr<Epetra_MpiComm> (new Epetra_MpiComm(MPI_COMM_WORLD));
+#else
     charge_comm_ = unique_ptr<Epetra_SerialComm> (new Epetra_SerialComm);
-    charge_map_ = unique_ptr<Epetra_Map> ( new Epetra_Map(number_of_elements_, index_base_, *comm_));
+#endif
+    charge_map_ = unique_ptr<Epetra_Map> ( new Epetra_Map(number_of_points_, index_base_, *charge_comm_));
 
     // initialize and fill matrix
     
@@ -282,8 +292,8 @@ fill_matrix()
         fill_vector.push_back(spatial_constant(j, k) / (2 * point_distance_));
         rhs_sum -= fill_vector.back() * density_[nip];
 
-        Check(column_indices.size() == number_of_entries_per_row_[l], "column_indices size");
-        Check(fill_vector.size() == number_of_entries_per_row_[l], "fill_vector size");
+        Check(column_indices.size() == number_of_entries_per_row_[l]);
+        Check(fill_vector.size() == number_of_entries_per_row_[l]);
         
         // insert values into the matrix for the lhs
         if (matrix_->Filled())
@@ -298,7 +308,7 @@ fill_matrix()
         // insert values into the rhs
         int num_entries = 1;
         vector<int> global_index = {n};
-        vector<double> fill_value = {sum};
+        vector<double> fill_value = {rhs_sum};
         rhs_->ReplaceGlobalValues(num_entries, &fill_value[0], &global_index[0]);
     }
 
@@ -317,7 +327,8 @@ fill_charge_matrix()
     for (int l = 0; l < number_of_points_; ++l)
     {
         int i = l;
-        
+
+        // THERE'S AN ERROR HERE IF number_of_points_ > number_of_velocities_
         vector<int> column_indices(charge_number_of_entries_per_row_[l], 0);
         vector<double> fill_vector(charge_number_of_entries_per_row_[l], 0);
         
@@ -435,6 +446,12 @@ calculate_density()
 void FD_Vlasov::
 solve()
 {
+    calculate_charge_density();
+    calculate_electric_field();
+    calculate_density();
+
+    initial_xml();
+
     for (int i = 0; i < number_of_time_steps_; ++i)
     {
         if (i % dump_number_ == 0)
@@ -481,7 +498,7 @@ check_velocity(int g)
     }
     else
     {
-        Check(false, "velocity not found");
+        AssertMsg(false, "velocity not found");
         
         return -1;
     }
@@ -528,6 +545,65 @@ angle_constant(int p, int g, int o)
    Write current data to XML output file
 */
 void FD_Vlasov::
+initial_xml()
+{
+    pugi::xml_node output = output_file_.child("output");
+    string input_file = input_path_.substr(input_path_.find_last_of("/\\") + 1);
+    append_child(output, input_file, "input_file");
+
+    pugi::xml_node data = output.append_child("data");
+    
+    append_child(data, number_of_points_, "number_of_points");
+    append_child(data, number_of_velocities_, "number_of_velocities");
+    append_child(data, number_of_angles_, "number_of_angles");
+    append_child(data, number_of_elements_, "number_of_elements");
+    append_child(data, number_of_time_steps_, "number_of_time_steps");
+    append_child(data, dump_number_, "dump_number");
+    append_child(data, point_distance_, "point_distance");
+    append_child(data, velocity_distance_, "velocity_distance");
+    append_child(data, angle_distance_, "angle_distance");
+    append_child(data, time_step_, "time_step");
+    append_child(data, q_, "q");
+    append_child(data, qm_, "qm");
+    append_child(data, position_, "position");
+    append_child(data, velocity_, "velocity");
+    append_child(data, angle_, "angle");
+    append_child(data, number_of_entries_per_row_, "number_of_entries_per_row");
+    append_child(data, charge_number_of_entries_per_row_, "charge_number_of_entries_per_row");
+    append_child(data, max_iterations_, "max_iterations");
+    append_child(data, tolerance_, "tolerance");
+}
+
+
+/* 
+   Write current data to XML output file
+*/
+void FD_Vlasov::
 dump_xml(int i, double t)
 {
+    pugi::xml_node output = output_file_.child("output");
+    pugi::xml_node dump = output.append_child("dump");
+
+    pugi::xml_attribute it = dump.append_attribute("time_step");
+    it.set_value(to_string(i).c_str());
+    pugi::xml_attribute ti = dump.append_attribute("time");
+    ti.set_value(to_string(t).c_str());
+
+    append_child(dump, electric_field_, "electric_field");
+    append_child(dump, magnetic_field_, "magnetic_field");
+    append_child(dump, charge_density_, "charge_density");
+    append_child(dump, density_, "density");
+    append_child(dump, mean_density_, "mean_density");
+}
+
+void FD_Vlasov::
+save_xml()
+{
+    // pugi::xml_node output = output_.child("output");
+    // pugi::xml_node final = output.append_child("final");
+
+    // append_child(final, time_values_, "time_values");
+    // append_child(final, kinetic_energy_, "kinetic_energy");
+    
+    output_file_.save_file(output_path_.c_str());
 }

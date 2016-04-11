@@ -52,7 +52,7 @@ child_value<string> (pugi::xml_node &node,
 
     if (required && value == "")
     {
-        Check(false, "required value (" + description + ") not found");
+        AssertMsg(false, "required value (" + description + ") not found");
     }
     
     return value;
@@ -87,7 +87,7 @@ child_vector(pugi::xml_node &node,
     string_to_vector(child_value<string>(node, description, required),
                      value);
     
-    Check(value.size() == expected_size, description + " size");
+    AssertMsg(value.size() == expected_size, description + " size");
     
     return value;
 }
