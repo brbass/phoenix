@@ -55,8 +55,9 @@ private:
     vector<double> velocity_;
     vector<double> angle_;
     
-    vector<double> electric_field_;
-    vector<double> magnetic_field_;
+    vector<double> electric_field_x_;
+    vector<double> electric_field_y_;
+    vector<double> magnetic_field_z_;
     vector<double> charge_density_;
     
     vector<double> density_;

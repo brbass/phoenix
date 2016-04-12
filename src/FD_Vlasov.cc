@@ -39,8 +39,9 @@ check_class_invariants()
     Assert(velocity_.size() == number_of_velocities_);
     Assert(angle_.size() == number_of_angles_);
 
-    Assert(electric_field_.size() == number_of_points_);
-    Assert(magnetic_field_.size() == number_of_points_);
+    Assert(electric_field_x_.size() == number_of_points_);
+    Assert(electric_field_y_.size() == number_of_points_);
+    Assert(magnetic_field_z_.size() == number_of_points_);
     Assert(charge_density_.size() == number_of_points_);
 
     Assert(density_.size() == number_of_elements_);
@@ -116,15 +117,30 @@ parse_xml()
 
     pugi::xml_node data = input.child("data");
     pugi::xml_node magnetic_field = data.child("magnetic_field");
+    pugi::xml_node electric_field = data.child("electric_field");
     pugi::xml_node initial_density = data.child("initial_density");
     
-    electric_field_.resize(number_of_points_, 0);
+    electric_field_x_.assign(number_of_points_, 0);
+
+    electric_field_y_.resize(number_of_points_, 0);
+    magnetic_field_z_.resize(number_of_points_, 0);
+
+    string electric_field_type = child_value<string>(electric_field, "type");
+    if (electric_field_type == "constant")
+    {
+        double constant_electric_field = child_value<double>(electric_field, "value");
+        electric_field_y_.assign(number_of_points_, constant_electric_field);
+    }
+    else
+    {
+        AssertMsg(false, "electric_field type not found");
+    }
 
     string magnetic_field_type = child_value<string>(magnetic_field, "type");
     if (magnetic_field_type == "constant")
     {
         double constant_magnetic_field = child_value<double>(magnetic_field, "value");
-        magnetic_field_.resize(number_of_points_, constant_magnetic_field);
+        magnetic_field_z_.assign(number_of_points_, constant_magnetic_field);
     }
     else
     {
@@ -173,7 +189,7 @@ initialize_trilinos()
     //
 
     // periodic boundary conditions for angle and space mean that the only variation in
-    // the number of entries per row is due to the velocity dirichlet boundary conditions
+    // the number of entries per row is due to the velocity reflecting boundary conditions
     // f_j = 0 for j = -1, number_of_velocities
     number_of_entries_per_row_.resize(number_of_elements_, 7);
     for (int i = 0; i < number_of_points_; ++i)
@@ -183,8 +199,8 @@ initialize_trilinos()
             int njm = subscript_to_index(i, 0, k);
             int njp = subscript_to_index(i, number_of_velocities_ - 1, k);
 
-            number_of_entries_per_row_[njm] -= 1;
-            number_of_entries_per_row_[njp] -= 1;
+            number_of_entries_per_row_[njm] = 5;
+            number_of_entries_per_row_[njp] = 5;
         }
     }
     
@@ -211,7 +227,11 @@ initialize_trilinos()
     solver_->SetAztecOption(AZ_poly_ord, poly_ord_);
     solver_->SetAztecOption(AZ_solver, AZ_gmres);
     solver_->SetAztecOption(AZ_kspace, kspace_);
-    if (!solver_print_)
+    if (solver_print_)
+    {
+        solver_->SetAztecOption(AZ_output, AZ_all);
+    }
+    else
     {
         solver_->SetAztecOption(AZ_output, AZ_none);
     }
@@ -245,7 +265,11 @@ initialize_trilinos()
     charge_solver_->SetAztecOption(AZ_poly_ord, poly_ord_);
     charge_solver_->SetAztecOption(AZ_solver, AZ_gmres);
     charge_solver_->SetAztecOption(AZ_kspace, kspace_);
-    if (!solver_print_)
+    if (solver_print_)
+    {
+        charge_solver_->SetAztecOption(AZ_output, AZ_all);
+    }
+    else
     {
         charge_solver_->SetAztecOption(AZ_output, AZ_none);
     }
@@ -288,40 +312,55 @@ fill_matrix()
         double rhs_sum = 0;
         double value;
 
-        column_indices.push_back(nim);
-        fill_vector.push_back(-spatial_constant(j, k) / (2 * point_distance_));
-        rhs_sum -= fill_vector.back() * density_[nim];
-        
-        if (j != 0)
-        {
-            column_indices.push_back(njm);
-            fill_vector.push_back(-velocity_constant(i, jm1, k) / (2 * velocity_distance_));
-            rhs_sum -= fill_vector.back() * density_[njm];
-        }
-        
-        column_indices.push_back(nkm);
-        fill_vector.push_back(-angle_constant(i, j, km1) / (2 * angle_distance_));
-        rhs_sum -= fill_vector.back() * density_[nkm];
+        // time derivative
         
         column_indices.push_back(n);
-        fill_vector.push_back(2 / time_step_);
-        rhs_sum += fill_vector.back() * density_[n];
-        
-        column_indices.push_back(nkp);
-        fill_vector.push_back(angle_constant(i, j, kp1) / (2 * angle_distance_));
-        rhs_sum -= fill_vector.back() * density_[nkp];
-        
-        if (j != number_of_velocities_ - 1)
-        {
-            column_indices.push_back(njp);
-            fill_vector.push_back(velocity_constant(i, jp1, k) / (2 * velocity_distance_));
-            rhs_sum -= fill_vector.back() * density_[njp];
-        }
+        value = 2 / time_step_;
+        fill_vector.push_back(value);
+        rhs_sum += value * density_[n];
+
+        // spatial derivative
         
         column_indices.push_back(nip);
-        fill_vector.push_back(spatial_constant(j, k) / (2 * point_distance_));
-        rhs_sum -= fill_vector.back() * density_[nip];
+        value = spatial_constant(j, k) / (2 * point_distance_);
+        fill_vector.push_back(value);
+        rhs_sum -= value * density_[nip];
+            
+        column_indices.push_back(nim);
+        value = -spatial_constant(j, k) / (2 * point_distance_);
+        fill_vector.push_back(value);
+        rhs_sum -= value * density_[nim];
 
+        // velocity derivative
+
+        if (j == 0 || j == number_of_velocities_ - 1)
+        {
+            
+        }
+        else 
+        {
+            column_indices.push_back(njp);
+            value = velocity_constant(i, jp1, k) / (2 * velocity_distance_);
+            fill_vector.push_back(value);
+            rhs_sum -= value * density_[njp];
+        
+            column_indices.push_back(njm);
+            value = -velocity_constant(i, jm1, k) / (2 * velocity_distance_);
+            fill_vector.push_back(value);
+            rhs_sum -= value * density_[njm];
+        }
+        // angular derivative
+        
+        column_indices.push_back(nkm);
+        value = -angle_constant(i, j, km1) / (2 * angle_distance_);
+        fill_vector.push_back(value);
+        rhs_sum -= value * density_[nkm];
+        
+        column_indices.push_back(nkp);
+        value = angle_constant(i, j, kp1) / (2 * angle_distance_);
+        fill_vector.push_back(value);
+        rhs_sum -= value * density_[nkp];
+        
         Check(column_indices.size() == number_of_entries_per_row_[l]);
         Check(fill_vector.size() == number_of_entries_per_row_[l]);
         
@@ -346,6 +385,8 @@ fill_matrix()
     {
         matrix_->FillComplete();
     }
+    
+    // cout << *matrix_ << endl;
 }
 
 /* 
@@ -368,9 +409,9 @@ fill_charge_matrix()
         column_indices[1] = i;
         column_indices[2] = ip1;
         
-        fill_vector[0] = -electric_field_[im1] / (2 * point_distance_);
+        fill_vector[0] = -electric_field_x_[im1] / (2 * point_distance_);
         fill_vector[1] = 0;
-        fill_vector[2] = electric_field_[ip1] / (2 * point_distance_);
+        fill_vector[2] = electric_field_x_[ip1] / (2 * point_distance_);
         
         if (matrix_->Filled())
         {
@@ -392,6 +433,8 @@ fill_charge_matrix()
     {
         charge_matrix_->FillComplete();
     }
+
+    // cout << *charge_matrix_ << endl;
 }
 
 /* 
@@ -408,14 +451,15 @@ calculate_charge_density()
         {
             double sum = 0;
             
-            for (int k = 0; k < number_of_angles_ - 1; ++k)
+            for (int k = 0; k < number_of_angles_; ++k)
             {
+                int k1 = check_angle(k+1);
                 int n = subscript_to_index(i, j, k);
-                int nkp = subscript_to_index(i, j, k + 1);
+                int nkp = subscript_to_index(i, j, k1);
                 
-                sum += (angle_[k + 1] - angle_[k]) * (density_[n] + density_[nkp]) / 2;
+                sum += angle_distance_ * (density_[n] + density_[nkp]) / 2;
             }
-     
+            
             int n = j + number_of_velocities_ * i;
             
             mean_density_[n] = sum;
@@ -433,10 +477,7 @@ calculate_charge_density()
             int n = j + number_of_velocities_ * i;
             int njp = j + 1 + number_of_velocities_ * i;
 
-            double vj = velocity_[j];
-            double vjp1 = velocity_[j + 1];
-
-            sum += (vjp1 - vj) * (vj * vj * mean_density_[n] + vjp1 * vjp1 * mean_density_[njp]) / 2;
+            sum += velocity_distance_ * (velocity_[j] * mean_density_[n] + velocity_[j + 1] * mean_density_[njp]) / 2;
         }
         
         charge_density_[i] = q_ * sum;
@@ -450,10 +491,10 @@ void FD_Vlasov::
 calculate_electric_field()
 {
     fill_charge_matrix();
-    
+
     charge_solver_->Iterate(max_iterations_, tolerance_);
 
-    charge_lhs_->ExtractCopy(&electric_field_[0]);
+    charge_lhs_->ExtractCopy(&electric_field_x_[0]);
 }
 
 /*
@@ -512,23 +553,17 @@ check_point(int p)
 int FD_Vlasov::
 check_velocity(int g)
 {
-    if (g >= 0 && g < number_of_velocities_)
+    if (g < 0)
     {
-        return g;
+        g = -g;
     }
-    else if (g == -1)
+    else if (g >= number_of_velocities_)
     {
-        return 1;
-    }
-    else if (g == number_of_velocities_)
-    {
-        return number_of_velocities_ - 2;
+        g = number_of_velocities_ - 1 - (g - number_of_velocities_ - 1);
     }
     else
     {
-        AssertMsg(false, "velocity not found");
-        
-        return -1;
+        return g;
     }
 }
 
@@ -557,16 +592,16 @@ spatial_constant(int g, int o)
 double FD_Vlasov::
 velocity_constant(int p, int g, int o)
 {
-    return electric_field_[p] * cos(angle_[o]);
+    return qm_ * (electric_field_x_[p] * cos(angle_[o]) + electric_field_y_[p] * sin(angle_[o]));
 }
 
 /*
-  Constant in front of angular derivative terms
+  Constant in front of angular derivative terms: MAY HAVE ERROR
 */
 double FD_Vlasov::
 angle_constant(int p, int g, int o)
 {
-    return 1 / velocity_[g] * (-electric_field_[p] - velocity_[g] * magnetic_field_[p] * cos(2 * angle_[o]));
+    return qm_ / velocity_[g] * (-electric_field_x_[p] * sin(angle_[o]) + electric_field_y_[p] * cos(angle_[o]) - velocity_[g] * magnetic_field_z_[p] * cos(2 * angle_[o]));
 }
 
 /* 
@@ -617,8 +652,9 @@ dump_xml(int i, double t)
     pugi::xml_attribute ti = dump.append_attribute("time");
     ti.set_value(to_string(t).c_str());
 
-    append_child(dump, electric_field_, "electric_field");
-    append_child(dump, magnetic_field_, "magnetic_field");
+    append_child(dump, electric_field_x_, "electric_field_x");
+    append_child(dump, electric_field_y_, "electric_field_y");
+    append_child(dump, magnetic_field_z_, "magnetic_field_z");
     append_child(dump, charge_density_, "charge_density");
     append_child(dump, density_, "density");
     append_child(dump, mean_density_, "mean_density");
