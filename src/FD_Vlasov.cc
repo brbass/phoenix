@@ -199,14 +199,10 @@ parse_xml()
 void FD_Vlasov::
 initialize_trilinos()
 {
-    //
     // initialize matrix for density solves
-    //
-
-    // periodic boundary conditions for angle and space mean that the only variation in
-    // the number of entries per row is due to the velocity reflecting boundary conditions
-    // f_j = 0 for j = -1, number_of_velocities
+    
     number_of_entries_per_row_.resize(number_of_elements_, 7);
+
     for (int i = 0; i < number_of_points_; ++i)
     {
         for (int k = 0; k < number_of_angles_; ++k)
@@ -216,6 +212,51 @@ initialize_trilinos()
 
             number_of_entries_per_row_[njm] = 5;
             number_of_entries_per_row_[njp] = 5;
+        }
+    }
+
+    vector<int> subscript(3);
+
+    for (int l = 0; l < number_of_elements_; ++l) // local index
+    {
+        int n = l; // global index
+        
+        index_to_subscript(l, subscript);
+        
+        int i = subscript[0];
+        int j = subscript[1];
+        int k = subscript[2];
+        
+        int im1 = check_point(i - 1);
+        int ip1 = check_point(i + 1);
+        int jm1 = check_velocity(j - 1);
+        int jp1 = check_velocity(j + 1);
+        int km1 = check_angle(k - 1);
+        int kp1 = check_angle(k + 1);
+
+        int nim = subscript_to_index(im1, j, k);
+        int nip = subscript_to_index(ip1, j, k);
+        int njm = subscript_to_index(i, jm1, k);
+        int njp = subscript_to_index(i, jp1, k);
+        int nkm = subscript_to_index(i, j, km1);
+        int nkp = subscript_to_index(i, j, kp1);
+
+        int sum = 0;
+        if (nim == n)
+        {
+            number_of_entries_per_row_[n] -= 1;
+        }
+        if (nip == n)
+        {
+            number_of_entries_per_row_[n] -= 1;
+        }
+        if (nkm == n)
+        {
+            number_of_entries_per_row_[n] -= 1;
+        }
+        if (nkp == n)
+        {
+            number_of_entries_per_row_[n] -= 1;
         }
     }
     
@@ -256,6 +297,20 @@ initialize_trilinos()
     //
     
     charge_number_of_entries_per_row_.resize(number_of_points_, 3);
+    for (int i = 0; i < number_of_points_; ++i)
+    {
+        int im1 = check_point(i - 1);
+        int ip1 = check_point(i + 1);
+        
+        if (im1 == i)
+        {
+            charge_number_of_entries_per_row_[i] -= 1;
+        }
+        if (ip1 == i)
+        {
+            charge_number_of_entries_per_row_[i] -= 1;
+        }
+    }
 
     // initialize communications classes
 
@@ -335,15 +390,29 @@ fill_matrix()
         rhs_sum += value * density_[n];
 
         // spatial derivative
-        
-        column_indices.push_back(nip);
+
         value = spatial_constant(j, k) / (2 * point_distance_);
-        fill_vector.push_back(value);
+        if (nip == n)
+        {
+            fill_vector[0] += value;
+        }
+        else
+        {
+            column_indices.push_back(nip);
+            fill_vector.push_back(value);
+        }
         rhs_sum -= value * density_[nip];
-            
-        column_indices.push_back(nim);
+        
         value = -spatial_constant(j, k) / (2 * point_distance_);
-        fill_vector.push_back(value);
+        if (nim == n)
+        {
+            fill_vector[0] += value;
+        }
+        else
+        {
+            column_indices.push_back(nim);
+            fill_vector.push_back(value);
+        }
         rhs_sum -= value * density_[nim];
 
         // velocity derivative
@@ -366,14 +435,28 @@ fill_matrix()
         }
         // angular derivative
         
-        column_indices.push_back(nkm);
         value = -angle_constant(i, j, km1) / (2 * angle_distance_);
-        fill_vector.push_back(value);
+        if (nkm == n)
+        {
+            fill_vector[0] += value;
+        }
+        else
+        {
+            column_indices.push_back(nkm);
+            fill_vector.push_back(value);
+        }
         rhs_sum -= value * density_[nkm];
         
-        column_indices.push_back(nkp);
         value = angle_constant(i, j, kp1) / (2 * angle_distance_);
-        fill_vector.push_back(value);
+        if (nkp == n)
+        {
+            fill_vector[0] += value;
+        }
+        else
+        {
+            column_indices.push_back(nkp);
+            fill_vector.push_back(value);
+        }
         rhs_sum -= value * density_[nkp];
         
         Check(column_indices.size() == number_of_entries_per_row_[l]);
@@ -414,21 +497,40 @@ fill_charge_matrix()
     {
         int i = l;
 
-        vector<int> column_indices(charge_number_of_entries_per_row_[l], 0);
-        vector<double> fill_vector(charge_number_of_entries_per_row_[l], 0);
+        vector<int> column_indices;
+        vector<double> fill_vector;
         
         int im1 = check_point(i - 1);
         int ip1 = check_point(i + 1);
 
-        column_indices[0] = im1;
-        column_indices[1] = i;
-        column_indices[2] = ip1;
+        double value;
+
+        column_indices.push_back(i);
+        fill_vector.push_back(0);
         
-        fill_vector[0] = -electric_field_x_[im1] / (2 * point_distance_);
-        fill_vector[1] = 0;
-        fill_vector[2] = electric_field_x_[ip1] / (2 * point_distance_);
+        value = -electric_field_x_[im1] / (2 * point_distance_);
+        if (im1 == i)
+        {
+            fill_vector[0] += value;
+        }
+        else
+        {
+            column_indices.push_back(im1);
+            fill_vector.push_back(value);
+        }
+
+        value = electric_field_x_[ip1] / (2 * point_distance_);
+        if (ip1 == i)
+        {
+            fill_vector[0] += value;
+        }
+        else
+        {
+            column_indices.push_back(ip1);
+            fill_vector.push_back(value);
+        }
         
-        if (matrix_->Filled())
+        if (charge_matrix_->Filled())
         {
             charge_matrix_->ReplaceGlobalValues(i, charge_number_of_entries_per_row_[l], &fill_vector[0], &column_indices[0]);
         }
@@ -570,11 +672,11 @@ check_velocity(int g)
 {
     if (g < 0)
     {
-        g = -g;
+        return (-g + number_of_velocities_) % number_of_velocities_;
     }
     else if (g >= number_of_velocities_)
     {
-        g = number_of_velocities_ - 1 - (g - number_of_velocities_ - 1);
+        return (2 * (number_of_velocities_ - 1) - g + number_of_velocities_) % number_of_velocities_;
     }
     else
     {
