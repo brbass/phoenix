@@ -110,7 +110,7 @@ parse_xml()
     angle_.resize(number_of_angles_);
     for (int i = 0; i < number_of_angles_; ++i)
     {
-        angle_[i] = i * angle_distance_;
+        angle_[i] = static_cast<double>(i) * angle_distance_;
     }
     
     // problem data
@@ -167,6 +167,21 @@ parse_xml()
             {
                 int n = subscript_to_index(i, j, k);
                 density_[n] = monodirectional_density;
+            }
+        }
+    }
+    else if (initial_density_type == "monoenergetic")
+    {
+        double monoenergetic_density = child_value<double>(initial_density, "value");
+        int j = child_value<int>(initial_density, "velocity");
+        
+        density_.assign(number_of_elements_, 0);
+        for (unsigned i = 0; i < number_of_points_; ++i)
+        {
+            for (unsigned k = 0; k < number_of_angles_; ++k)
+            {
+                int n = subscript_to_index(i, j, k);
+                density_[n] = monoenergetic_density;
             }
         }
     }
@@ -601,7 +616,7 @@ velocity_constant(int p, int g, int o)
 double FD_Vlasov::
 angle_constant(int p, int g, int o)
 {
-    return qm_ / velocity_[g] * (-electric_field_x_[p] * sin(angle_[o]) + electric_field_y_[p] * cos(angle_[o]) - velocity_[g] * magnetic_field_z_[p] * cos(2 * angle_[o]));
+    return qm_ / velocity_[g] * (-electric_field_x_[p] * sin(angle_[o]) + electric_field_y_[p] * cos(angle_[o])) - qm_ * magnetic_field_z_[p];
 }
 
 /* 
