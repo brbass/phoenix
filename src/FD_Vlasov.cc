@@ -43,6 +43,7 @@ check_class_invariants()
     Assert(electric_field_y_.size() == number_of_points_);
     Assert(magnetic_field_z_.size() == number_of_points_);
     Assert(charge_density_.size() == number_of_points_);
+    Assert(delta_charge_density_.size() == number_of_points_);
 
     Assert(density_.size() == number_of_elements_);
     Assert(mean_density_.size() == number_of_points_ * number_of_velocities_);
@@ -148,6 +149,7 @@ parse_xml()
     }
 
     charge_density_.resize(number_of_points_, 0);
+    delta_charge_density_.resize(number_of_points_, 0);
 
     string initial_density_type = child_value<string>(initial_density, "type");
     if (initial_density_type == "constant")
@@ -182,6 +184,26 @@ parse_xml()
             {
                 int n = subscript_to_index(i, j, k);
                 density_[n] = monoenergetic_density;
+            }
+        }
+    }
+    else if (initial_density_type == "sinosoidal_monoenergetic")
+    {
+        double flat_density = child_value<double>(initial_density, "flat_density");
+        double wavenumber_space = child_value<double>(initial_density, "wavenumber_space");
+        double wavenumber_angle = child_value<double>(initial_density, "wavenumber_angle");
+        double perturbation_density = child_value<double>(initial_density, "perturbation_density");
+        int j = child_value<int>(initial_density, "velocity");
+        
+        density_.assign(number_of_elements_, 0);
+        
+        for (unsigned i = 0; i < number_of_points_; ++i)
+        {
+            for (unsigned k = 0; k < number_of_angles_; ++k)
+            {
+                int n = subscript_to_index(i, j, k);
+                
+                density_[n] = flat_density + perturbation_density * (sin(M_PI * wavenumber_space * position_[i]) + sin(M_PI * wavenumber_angle * angle_[k]));
             }
         }
     }
@@ -296,19 +318,18 @@ initialize_trilinos()
     // initialize matrix for charge density solves
     //
     
-    charge_number_of_entries_per_row_.resize(number_of_points_, 3);
+    charge_number_of_entries_per_row_.resize(number_of_points_, 2);
     for (int i = 0; i < number_of_points_; ++i)
     {
-        int im1 = check_point(i - 1);
         int ip1 = check_point(i + 1);
         
-        if (im1 == i)
-        {
-            charge_number_of_entries_per_row_[i] -= 1;
-        }
         if (ip1 == i)
         {
             charge_number_of_entries_per_row_[i] -= 1;
+        }
+        if (i == 0)
+        {
+            charge_number_of_entries_per_row_[i] = 1;
         }
     }
 
@@ -390,7 +411,7 @@ fill_matrix()
         rhs_sum += value * density_[n];
 
         // spatial derivative
-
+        
         value = spatial_constant(j, k) / (2 * point_distance_);
         if (nip == n)
         {
@@ -433,6 +454,7 @@ fill_matrix()
             fill_vector.push_back(value);
             rhs_sum -= value * density_[njm];
         }
+
         // angular derivative
         
         value = -angle_constant(i, j, km1) / (2 * angle_distance_);
@@ -463,6 +485,7 @@ fill_matrix()
         Check(fill_vector.size() == number_of_entries_per_row_[l]);
         
         // insert values into the matrix for the lhs
+        
         if (matrix_->Filled())
         {
             matrix_->ReplaceGlobalValues(n, number_of_entries_per_row_[l], &fill_vector[0], &column_indices[0]);
@@ -496,38 +519,45 @@ fill_charge_matrix()
     for (int l = 0; l < number_of_points_; ++l)
     {
         int i = l;
+        int ip1 = check_point(i + 1);
+        
+        // matrix data
 
         vector<int> column_indices;
         vector<double> fill_vector;
         
-        int im1 = check_point(i - 1);
-        int ip1 = check_point(i + 1);
-
         double value;
 
-        column_indices.push_back(i);
-        fill_vector.push_back(0);
-        
-        value = -electric_field_x_[im1] / (2 * point_distance_);
-        if (im1 == i)
-        {
-            fill_vector[0] += value;
-        }
-        else
-        {
-            column_indices.push_back(im1);
-            fill_vector.push_back(value);
-        }
+        // rhs data
 
-        value = electric_field_x_[ip1] / (2 * point_distance_);
-        if (ip1 == i)
+        int num_entries = 1;
+        vector<int> global_index = {i};
+        vector<double> fill_value = {(delta_charge_density_[i] + delta_charge_density_[ip1]) / 2};
+        
+        // fill data
+
+        if (i == 0)
         {
-            fill_vector[0] += value;
+            column_indices.push_back(i);
+            fill_vector.push_back(1);
+            fill_value[0] = 0;
         }
         else
         {
-            column_indices.push_back(ip1);
+            value = -1. / point_distance_;
+            column_indices.push_back(i);
             fill_vector.push_back(value);
+        
+            value = 1. / point_distance_;
+            if (ip1 == i)
+            {
+                fill_vector[0] += value;
+            }
+            else
+            {
+                column_indices.push_back(ip1);
+                fill_vector.push_back(value);
+            }
         }
         
         if (charge_matrix_->Filled())
@@ -539,10 +569,6 @@ fill_charge_matrix()
             charge_matrix_->InsertGlobalValues(i, charge_number_of_entries_per_row_[l], &fill_vector[0], &column_indices[0]);
         }
         
-        int num_entries = 1;
-        vector<int> global_index = {i};
-        vector<double> fill_value = {charge_density_[i]};
-        
         charge_rhs_->ReplaceGlobalValues(num_entries, &fill_value[0], &global_index[0]);
     }
     
@@ -551,6 +577,7 @@ fill_charge_matrix()
         charge_matrix_->FillComplete();
     }
 
+    // cout << *charge_rhs_ << endl;
     // cout << *charge_matrix_ << endl;
 }
 
@@ -588,16 +615,37 @@ calculate_charge_density()
     for (int i = 0; i < number_of_points_; ++i)
     {
         double sum = 0;
-        
-        for (int j = 0; j < number_of_velocities_ - 1; ++j)
-        {
-            int n = j + number_of_velocities_ * i;
-            int njp = j + 1 + number_of_velocities_ * i;
 
-            sum += velocity_distance_ * (velocity_[j] * mean_density_[n] + velocity_[j + 1] * mean_density_[njp]) / 2;
+        if (number_of_velocities_ == 1)
+        {
+            sum = velocity_distance_ * velocity_[0] * mean_density_[i];
         }
-        
+        else
+        {
+            for (int j = 0; j < number_of_velocities_ - 1; ++j)
+            {
+                int n = j + number_of_velocities_ * i;
+                int njp = j + 1 + number_of_velocities_ * i;
+
+                sum += velocity_distance_ * (velocity_[j] * mean_density_[n] + velocity_[j + 1] * mean_density_[njp]) / 2;
+            }
+        }
         charge_density_[i] = q_ * sum;
+    }
+    
+    // calculate delta rho
+
+    double rho_av = 0;
+    
+    for (int i = 0; i < number_of_points_; ++i)
+    {
+        rho_av += charge_density_[i];
+    }
+    rho_av /= number_of_points_;
+    
+    for (int i = 0; i < number_of_points_; ++i)
+    {
+        delta_charge_density_[i] = charge_density_[i] - rho_av;
     }
 }
 
@@ -611,6 +659,8 @@ calculate_electric_field()
 
     charge_solver_->Iterate(max_iterations_, tolerance_);
 
+    // cout << (*charge_lhs_) << endl;
+
     charge_lhs_->ExtractCopy(&electric_field_x_[0]);
 }
 
@@ -621,6 +671,8 @@ void FD_Vlasov::
 calculate_density()
 {
     fill_matrix();
+
+    lhs_->PutScalar(0.0);
     
     solver_->Iterate(max_iterations_, tolerance_);
     
@@ -635,7 +687,7 @@ solve()
 {
     calculate_charge_density();
     calculate_electric_field();
-
+    
     initial_xml();
 
     for (int i = 0; i < number_of_time_steps_; ++i)
@@ -773,6 +825,7 @@ dump_xml(int i, double t)
     append_child(dump, electric_field_y_, "electric_field_y");
     append_child(dump, magnetic_field_z_, "magnetic_field_z");
     append_child(dump, charge_density_, "charge_density");
+    append_child(dump, delta_charge_density_, "delta_charge_density");
     append_child(dump, density_, "density");
     append_child(dump, mean_density_, "mean_density");
 }

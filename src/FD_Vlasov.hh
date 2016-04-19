@@ -59,6 +59,7 @@ private:
     vector<double> electric_field_y_;
     vector<double> magnetic_field_z_;
     vector<double> charge_density_;
+    vector<double> delta_charge_density_;
     
     vector<double> density_;
     vector<double> mean_density_;
