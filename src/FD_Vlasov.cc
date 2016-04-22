@@ -635,20 +635,30 @@ calculate_charge_density()
     
     // calculate delta rho
 
-    double rho_av = 0;
+    delta_charge_density_ = charge_density_;
     
-    for (int i = 0; i < number_of_points_; ++i)
-    {
-        rho_av += charge_density_[i];
-    }
-    rho_av /= number_of_points_;
-    
-    for (int i = 0; i < number_of_points_; ++i)
-    {
-        delta_charge_density_[i] = charge_density_[i] - rho_av;
-    }
+    normalize_vector(delta_charge_density_);
 }
 
+/*
+  Normalize vector so integral is zero
+*/
+void FD_Vlasov::
+normalize_vector(vector<double> &x)
+{
+    double mean = 0; 
+    
+    for (int i = 0; i < x.size(); ++i)
+    {
+        mean += x[i];
+    }
+    mean /= x.size();
+    
+    for (int i = 0; i < x.size(); ++i)
+    {
+        x[i] -= mean;
+    }
+}
 /*
   Calculate electric field from charge density
 */
@@ -662,6 +672,8 @@ calculate_electric_field()
     // cout << (*charge_lhs_) << endl;
 
     charge_lhs_->ExtractCopy(&electric_field_x_[0]);
+    
+    normalize_vector(electric_field_x_);
 }
 
 /*

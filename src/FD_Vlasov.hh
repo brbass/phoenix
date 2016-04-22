@@ -103,6 +103,8 @@ private:
     void initialize_trilinos();
     void fill_matrix();
     void fill_charge_matrix();
+
+    void normalize_vector(vector<double> &x);
     
     void calculate_charge_density();
     void calculate_electric_field();
