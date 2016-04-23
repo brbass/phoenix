@@ -9,8 +9,8 @@
     <print>0</print>
   </solver>
   <point_discretization>
-    <number_of_points>50</number_of_points>
-    <point_distance>0.02</point_distance>
+    <number_of_points>25</number_of_points>
+    <point_distance>0.04</point_distance>
   </point_discretization>
   <velocity_discretization>
     <number_of_velocities>10</number_of_velocities>
