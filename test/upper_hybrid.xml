@@ -10,7 +10,7 @@
   </solver>
   <point_discretization>
     <number_of_points>25</number_of_points>
-    <point_distance>0.04</point_distance>
+    <point_distance>0.2</point_distance>
   </point_discretization>
   <velocity_discretization>
     <number_of_velocities>10</number_of_velocities>
@@ -20,9 +20,9 @@
     <number_of_angles>4</number_of_angles>
   </angle_discretization>
   <time_discretization>
-    <number_of_time_steps>20001</number_of_time_steps>
-    <time_step>0.1</time_step>
-    <dump_number>50</dump_number>
+    <number_of_time_steps>10001</number_of_time_steps>
+    <time_step>0.01</time_step>
+    <dump_number>100</dump_number>
   </time_discretization>
   <data>
     <magnetic_field>
@@ -38,7 +38,7 @@
       <flat_density>1</flat_density>
       <velocity>5</velocity>
       <perturbation_density>0.01</perturbation_density>
-      <wavenumber_space>8</wavenumber_space>
+      <wavenumber_space>0.2</wavenumber_space>
       <wavenumber_angle>0</wavenumber_angle>
       <wavenumber_velocity>0</wavenumber_velocity>
     </initial_density>
