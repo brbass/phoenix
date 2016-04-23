@@ -207,6 +207,40 @@ parse_xml()
             }
         }
     }
+    else if (initial_density_type == "sinosoidal")
+    {
+        double flat_density = child_value<double>(initial_density, "flat_density");
+        double wavenumber_space = child_value<double>(initial_density, "wavenumber_space");
+        double wavenumber_angle = child_value<double>(initial_density, "wavenumber_angle");
+        double wavenumber_velocity = child_value<double>(initial_density, "wavenumber_velocity");
+        double perturbation_density = child_value<double>(initial_density, "perturbation_density");
+        int j = child_value<int>(initial_density, "velocity");
+        
+        density_.assign(number_of_elements_, 0);
+
+        for (unsigned i = 0; i < number_of_points_; ++i)
+        {
+            for (unsigned k = 0; k < number_of_angles_; ++k)
+            {
+                int n = subscript_to_index(i, j, k);
+                    
+                density_[n] = flat_density + perturbation_density * (sin(M_PI * wavenumber_space * position_[i]) + sin(M_PI * wavenumber_angle * angle_[k])) + sin(M_PI * wavenumber_velocity * velocity_[i]);
+            }
+        }
+        for (unsigned i = 0; i < number_of_points_; ++i)
+        {
+            for (unsigned j = 0; j < number_of_velocities_; ++j)
+            {
+                for (unsigned k = 0; k < number_of_angles_; ++k)
+                {
+                    int n = subscript_to_index(i, j, k);
+                    
+                    density_[n] +=  perturbation_density * sin(M_PI * wavenumber_velocity * velocity_[j]);
+                }
+            }
+        }
+                
+    }
     else
     {
         AssertMsg(false, "initial_density type not found");
@@ -291,8 +325,10 @@ initialize_trilinos()
 #endif
     map_ = unique_ptr<Epetra_Map> ( new Epetra_Map(number_of_elements_, index_base_, *comm_));
 
-    // initialize and fill matrix
+    Assert(map_->ConstantElementSize());
 
+    // initialize and fill matrix
+    
     matrix_ = unique_ptr<Epetra_CrsMatrix> (new Epetra_CrsMatrix(Copy, *map_, &number_of_entries_per_row_[0], true));
     lhs_ = unique_ptr<Epetra_Vector> (new Epetra_Vector(*map_));
     rhs_ = unique_ptr<Epetra_Vector> (new Epetra_Vector(*map_));
@@ -342,6 +378,8 @@ initialize_trilinos()
 #endif
     charge_map_ = unique_ptr<Epetra_Map> ( new Epetra_Map(number_of_points_, index_base_, *charge_comm_));
 
+    Assert(charge_map_->ConstantElementSize());
+
     // initialize and fill matrix
     
     charge_matrix_ = unique_ptr<Epetra_CrsMatrix> (new Epetra_CrsMatrix(Copy, *charge_map_, &charge_number_of_entries_per_row_[0], true));
@@ -374,11 +412,15 @@ fill_matrix()
 {
     vector<int> subscript(3);
     
-    for (int l = 0; l < number_of_elements_; ++l) // local index
+    int num_my_elements = map_->NumMyElements();
+    vector<int> my_global_elements(num_my_elements);
+    map_->MyGlobalElements(&my_global_elements[0]);
+
+    for (int l = 0; l < num_my_elements; ++l) // local index
     {
-        int n = l; // global index
+        int n = my_global_elements[l];
         
-        index_to_subscript(l, subscript);
+        index_to_subscript(n, subscript);
         
         int i = subscript[0];
         int j = subscript[1];
@@ -516,11 +558,15 @@ fill_matrix()
 void FD_Vlasov::
 fill_charge_matrix()
 {
-    for (int l = 0; l < number_of_points_; ++l)
+    int num_my_elements = charge_map_->NumMyElements();
+    vector<int> my_global_elements(num_my_elements);
+    charge_map_->MyGlobalElements(&my_global_elements[0]);
+    
+    for (int l = 0; l < num_my_elements; ++l)
     {
-        int i = l;
+        int i = my_global_elements[l];
         int ip1 = check_point(i + 1);
-        
+
         // matrix data
 
         vector<int> column_indices;
@@ -669,10 +715,24 @@ calculate_electric_field()
 
     charge_solver_->Iterate(max_iterations_, tolerance_);
 
-    // cout << (*charge_lhs_) << endl;
-
-    charge_lhs_->ExtractCopy(&electric_field_x_[0]);
+    int num_my_elements = charge_map_->NumMyElements();
+    vector<double> my_electric(num_my_elements);
+    charge_lhs_->ExtractCopy(&my_electric[0]);
+    comm_->GatherAll(&my_electric[0], &electric_field_x_[0], num_my_elements);
     
+    if (!charge_map_->LinearMap())
+    {
+        vector<int> my_global_elements(num_my_elements);
+        vector<int> global_elements(number_of_points_);
+        charge_map_->MyGlobalElements(&my_global_elements[0]);
+        comm_->GatherAll(&my_global_elements[0], &global_elements[0], num_my_elements);
+        
+        for (int l = 0; l < number_of_points_; ++l)
+        {
+            electric_field_x_[global_elements[l]] = electric_field_x_[l];
+        }
+    }
+
     normalize_vector(electric_field_x_);
 }
 
@@ -688,7 +748,26 @@ calculate_density()
     
     solver_->Iterate(max_iterations_, tolerance_);
     
+    int num_my_elements = map_->NumMyElements();
+    vector<double> my_density(num_my_elements);
+    lhs_->ExtractCopy(&my_density[0]);
+    comm_->GatherAll(&my_density[0], &density_[0], num_my_elements);
+    
+    if (!map_->LinearMap())
+    {
+        vector<int> my_global_elements(num_my_elements);
+        vector<int> global_elements(number_of_points_);
+        map_->MyGlobalElements(&my_global_elements[0]);
+        comm_->GatherAll(&my_global_elements[0], &global_elements[0], num_my_elements);
+        
+        for (int l = 0; l < number_of_points_; ++l)
+        {
+            density_[global_elements[l]] = density_[l];
+        }
+    }
+
     lhs_->ExtractCopy(&density_[0]);
+
 }
 
 /* 
@@ -700,7 +779,7 @@ solve()
     calculate_charge_density();
     calculate_electric_field();
     
-    initial_xml();
+    // initial_xml();
 
     for (int i = 0; i < number_of_time_steps_; ++i)
     {
@@ -708,7 +787,7 @@ solve()
         {
             double t = time_step_ * i;
             
-            dump_xml(i, t);
+            // dump_xml(i, t);
         }
         
         calculate_charge_density();
@@ -791,31 +870,42 @@ angle_constant(int p, int g, int o)
 void FD_Vlasov::
 initial_xml()
 {
-    pugi::xml_node output = output_file_.child("output");
-    string input_file = input_path_.substr(input_path_.find_last_of("/\\") + 1);
-    append_child(output, input_file, "input_file");
+    int mpi_rank;
+    MPI_Comm_rank(MPI_COMM_WORLD, &mpi_rank);
+    MPI_Barrier(MPI_COMM_WORLD);
 
-    pugi::xml_node data = output.append_child("data");
-    
-    append_child(data, number_of_points_, "number_of_points");
-    append_child(data, number_of_velocities_, "number_of_velocities");
-    append_child(data, number_of_angles_, "number_of_angles");
-    append_child(data, number_of_elements_, "number_of_elements");
-    append_child(data, number_of_time_steps_, "number_of_time_steps");
-    append_child(data, dump_number_, "dump_number");
-    append_child(data, point_distance_, "point_distance");
-    append_child(data, velocity_distance_, "velocity_distance");
-    append_child(data, angle_distance_, "angle_distance");
-    append_child(data, time_step_, "time_step");
-    append_child(data, q_, "q");
-    append_child(data, qm_, "qm");
-    append_child(data, position_, "position");
-    append_child(data, velocity_, "velocity");
-    append_child(data, angle_, "angle");
-    append_child(data, number_of_entries_per_row_, "number_of_entries_per_row");
-    append_child(data, charge_number_of_entries_per_row_, "charge_number_of_entries_per_row");
-    append_child(data, max_iterations_, "max_iterations");
-    append_child(data, tolerance_, "tolerance");
+    if (mpi_rank == 0)
+    {
+        pugi::xml_node output = output_file_.child("output");
+        string input_file = input_path_.substr(input_path_.find_last_of("/\\") + 1);
+        append_child(output, input_file, "input_file");
+        
+        pugi::xml_node data = output.append_child("data");
+        
+        append_child(data, number_of_points_, "number_of_points");
+        append_child(data, number_of_velocities_, "number_of_velocities");
+        append_child(data, number_of_angles_, "number_of_angles");
+        append_child(data, number_of_elements_, "number_of_elements");
+        append_child(data, number_of_time_steps_, "number_of_time_steps");
+        append_child(data, dump_number_, "dump_number");
+        append_child(data, point_distance_, "point_distance");
+        append_child(data, velocity_distance_, "velocity_distance");
+        append_child(data, angle_distance_, "angle_distance");
+        append_child(data, time_step_, "time_step");
+        append_child(data, q_, "q");
+        append_child(data, qm_, "qm");
+        append_child(data, position_, "position");
+        append_child(data, velocity_, "velocity");
+        append_child(data, angle_, "angle");
+        append_child(data, number_of_entries_per_row_, "number_of_entries_per_row");
+        append_child(data, charge_number_of_entries_per_row_, "charge_number_of_entries_per_row");
+        append_child(data, max_iterations_, "max_iterations");
+        append_child(data, tolerance_, "tolerance");
+        
+        cout << setw(16) << "step";
+        cout << setw(16) << "time";
+        cout << endl;
+    }
 }
 
 
@@ -825,31 +915,48 @@ initial_xml()
 void FD_Vlasov::
 dump_xml(int i, double t)
 {
-    pugi::xml_node output = output_file_.child("output");
-    pugi::xml_node dump = output.append_child("dump");
+    int mpi_rank;
+    MPI_Comm_rank(MPI_COMM_WORLD, &mpi_rank);
+    MPI_Barrier(MPI_COMM_WORLD);
 
-    pugi::xml_attribute it = dump.append_attribute("time_step");
-    it.set_value(to_string(i).c_str());
-    pugi::xml_attribute ti = dump.append_attribute("time");
-    ti.set_value(to_string(t).c_str());
+    if (mpi_rank == 0)
+    {
+        cout << setw(16) << to_string(i + 1) + "/" + to_string(number_of_time_steps_);
+        cout << setw(16) << t;
+        cout << endl;
+        pugi::xml_node output = output_file_.child("output");
+        pugi::xml_node dump = output.append_child("dump");
 
-    append_child(dump, electric_field_x_, "electric_field_x");
-    append_child(dump, electric_field_y_, "electric_field_y");
-    append_child(dump, magnetic_field_z_, "magnetic_field_z");
-    append_child(dump, charge_density_, "charge_density");
-    append_child(dump, delta_charge_density_, "delta_charge_density");
-    append_child(dump, density_, "density");
-    append_child(dump, mean_density_, "mean_density");
+        pugi::xml_attribute it = dump.append_attribute("time_step");
+        it.set_value(to_string(i).c_str());
+        pugi::xml_attribute ti = dump.append_attribute("time");
+        ti.set_value(to_string(t).c_str());
+
+        append_child(dump, electric_field_x_, "electric_field_x");
+        append_child(dump, electric_field_y_, "electric_field_y");
+        append_child(dump, magnetic_field_z_, "magnetic_field_z");
+        append_child(dump, charge_density_, "charge_density");
+        append_child(dump, delta_charge_density_, "delta_charge_density");
+        // append_child(dump, density_, "density");
+        append_child(dump, mean_density_, "mean_density");
+    }
 }
 
 void FD_Vlasov::
 save_xml()
 {
-    // pugi::xml_node output = output_.child("output");
-    // pugi::xml_node final = output.append_child("final");
+    int mpi_rank;
+    MPI_Comm_rank(MPI_COMM_WORLD, &mpi_rank);
+    MPI_Barrier(MPI_COMM_WORLD);
 
-    // append_child(final, time_values_, "time_values");
-    // append_child(final, kinetic_energy_, "kinetic_energy");
+    if (mpi_rank == 0)
+    {
+        // pugi::xml_node output = output_.child("output");
+        // pugi::xml_node final = output.append_child("final");
+
+        // append_child(final, time_values_, "time_values");
+        // append_child(final, kinetic_energy_, "kinetic_energy");
     
-    output_file_.save_file(output_path_.c_str());
+        output_file_.save_file(output_path_.c_str());
+    }
 }
