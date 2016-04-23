@@ -1,0 +1,46 @@
+<?xml version="1.0"?>
+
+<input>
+  <solver>
+    <max_iterations>5000</max_iterations>
+    <tolerance>1e-6</tolerance>
+    <kspace>1000</kspace>
+    <poly_ord>3</poly_ord>
+    <print>0</print>
+  </solver>
+  <point_discretization>
+    <number_of_points>50</number_of_points>
+    <point_distance>0.02</point_distance>
+  </point_discretization>
+  <velocity_discretization>
+    <number_of_velocities>10</number_of_velocities>
+    <velocity_distance>0.1</velocity_distance>
+  </velocity_discretization>
+  <angle_discretization>
+    <number_of_angles>4</number_of_angles>
+  </angle_discretization>
+  <time_discretization>
+    <number_of_time_steps>1001</number_of_time_steps>
+    <time_step>0.1</time_step>
+    <dump_number>10</dump_number>
+  </time_discretization>
+  <data>
+    <magnetic_field>
+      <type>constant</type>
+      <value>1.73205080756887729352744634151</value>
+    </magnetic_field>
+    <electric_field>
+      <type>constant</type>
+      <value>0</value>
+    </electric_field>
+    <initial_density>
+      <type>sinosoidal</type>
+      <flat_density>1</flat_density>
+      <velocity>5</velocity>
+      <perturbation_density>0.01</perturbation_density>
+      <wavenumber_space>8</wavenumber_space>
+      <wavenumber_angle>0</wavenumber_angle>
+      <wavenumber_velocity>0</wavenumber_velocity>
+    </initial_density>
+  </data>
+</input>
