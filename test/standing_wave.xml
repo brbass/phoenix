@@ -38,7 +38,7 @@
       <flat_density>1</flat_density>
       <velocity>6</velocity>
       <perturbation_density>0.01</perturbation_density>
-      <wavenumber_space>1</wavenumber_space>
+      <wavenumber_space>8</wavenumber_space>
       <wavenumber_angle>0</wavenumber_angle>
     </initial_density>
   </data>
