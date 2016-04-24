@@ -14,7 +14,7 @@
   </point_discretization>
   <velocity_discretization>
     <number_of_velocities>5</number_of_velocities>
-    <velocity_distance>0.001</velocity_distance>
+    <velocity_distance>0.01</velocity_distance>
   </velocity_discretization>
   <angle_discretization>
     <number_of_angles>64</number_of_angles>
@@ -34,13 +34,13 @@
       <value>0</value>
     </electric_field>
     <initial_density>
-      <type>sinosoidal_monoenergetic_monodirectional</type>
+      <type>sinosoidal_monoenergetic</type>
       <flat_density>1</flat_density>
       <velocity>2</velocity>
       <angle>0</angle>
       <perturbation_density>0.01</perturbation_density>
-      <wavenumber_space>1</wavenumber_space>
-      <wavenumber_angle>0</wavenumber_angle>
+      <wavenumber_space>0</wavenumber_space>
+      <wavenumber_angle>1</wavenumber_angle>
     </initial_density>
   </data>
 </input>
