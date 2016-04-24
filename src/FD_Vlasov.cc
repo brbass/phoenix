@@ -799,7 +799,7 @@ calculate_density()
     // if (!map_->LinearMap())
     // {
         vector<int> my_global_elements(num_my_elements);
-        vector<int> global_elements(number_of_points_);
+        vector<int> global_elements(number_of_elements_);
         map_->MyGlobalElements(&my_global_elements[0]);
         comm_->GatherAll(&my_global_elements[0], &global_elements[0], num_my_elements);
         
@@ -809,7 +809,7 @@ calculate_density()
         {
             density_[global_elements[l]] = density[l];
         }
-    // }
+        // }
 }
 
 /* 
