@@ -22,7 +22,7 @@ def plot_fields(output_filename):
     electric_field = np.empty((number_of_cells, number_of_times))
     
     for i in range(len(dumps)):
-        charge_density[:,i] = np.fromstring(dumps[i].findtext("charge_density"), sep="\t")
+        charge_density[:,i] = np.fromstring(dumps[i].findtext("delta_charge_density"), sep="\t")
         electric_field[:,i] = np.fromstring(dumps[i].findtext("electric_field_x"), sep="\t")
 
     # plot electric field and charge density
@@ -34,7 +34,7 @@ def plot_fields(output_filename):
     plt.contourf(x, y, charge_density)
     plt.xlabel("t")
     plt.ylabel("x")
-    plt.title(r"$\rho$")
+    plt.title(r"$\delta\rho$")
     plt.colorbar()
     
     plt.subplot(212)
