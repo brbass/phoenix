@@ -27,7 +27,7 @@
   <data>
     <magnetic_field>
       <type>constant</type>
-      <value>0</value>
+      <value>0.01</value>
     </magnetic_field>
     <electric_field>
       <type>constant</type>
