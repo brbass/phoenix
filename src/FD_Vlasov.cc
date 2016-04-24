@@ -762,8 +762,8 @@ calculate_electric_field()
     charge_lhs_->ExtractCopy(&my_electric[0]);
     comm_->GatherAll(&my_electric[0], &electric_field_x_[0], num_my_elements);
     
-    if (!charge_map_->LinearMap())
-    {
+    // if (!charge_map_->LinearMap())
+    // {
         vector<int> my_global_elements(num_my_elements);
         vector<int> global_elements(number_of_points_);
         charge_map_->MyGlobalElements(&my_global_elements[0]);
@@ -773,7 +773,7 @@ calculate_electric_field()
         {
             electric_field_x_[global_elements[l]] = electric_field_x_[l];
         }
-    }
+    // }
 
     normalize_vector(electric_field_x_);
 }
@@ -795,8 +795,8 @@ calculate_density()
     lhs_->ExtractCopy(&my_density[0]);
     comm_->GatherAll(&my_density[0], &density_[0], num_my_elements);
     
-    if (!map_->LinearMap())
-    {
+    // if (!map_->LinearMap())
+    // {
         vector<int> my_global_elements(num_my_elements);
         vector<int> global_elements(number_of_points_);
         map_->MyGlobalElements(&my_global_elements[0]);
@@ -806,7 +806,7 @@ calculate_density()
         {
             density_[global_elements[l]] = density_[l];
         }
-    }
+    // }
 }
 
 /* 
