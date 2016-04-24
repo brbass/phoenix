@@ -760,7 +760,7 @@ calculate_electric_field()
     int num_my_elements = charge_map_->NumMyElements();
     vector<double> my_electric(num_my_elements);
     charge_lhs_->ExtractCopy(&my_electric[0]);
-    comm_->GatherAll(&my_electric[0], &electric_field_x_[0], num_my_elements);
+    charge_comm_->GatherAll(&my_electric[0], &electric_field_x_[0], num_my_elements);
     
     if (!charge_map_->LinearMap())
     {
