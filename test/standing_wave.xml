@@ -22,7 +22,7 @@
   <time_discretization>
     <number_of_time_steps>101</number_of_time_steps>
     <time_step>0.1</time_step>
-    <dump_number>100</dump_number>
+    <dump_number>1</dump_number>
   </time_discretization>
   <data>
     <magnetic_field>
