@@ -17,7 +17,7 @@
     <velocity_distance>0.01</velocity_distance>
   </velocity_discretization>
   <angle_discretization>
-    <number_of_angles>16</number_of_angles>
+    <number_of_angles>4</number_of_angles>
   </angle_discretization>
   <time_discretization>
     <number_of_time_steps>101</number_of_time_steps>
