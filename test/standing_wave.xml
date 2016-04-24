@@ -34,12 +34,12 @@
       <value>0</value>
     </electric_field>
     <initial_density>
-      <type>sinosoidal_monoenergetic</type>
+      <type>sinosoidal_monoenergetic_monodirectional</type>
       <flat_density>1</flat_density>
       <velocity>6</velocity>
+      <angle>0</angle>
       <perturbation_density>0.01</perturbation_density>
       <wavenumber_space>1</wavenumber_space>
-      <wavenumber_angle>0</wavenumber_angle>
     </initial_density>
   </data>
 </input>

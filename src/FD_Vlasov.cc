@@ -207,6 +207,23 @@ parse_xml()
             }
         }
     }
+    else if (initial_density_type == "sinosoidal_monoenergetic_monodirectional")
+    {
+        double flat_density = child_value<double>(initial_density, "flat_density");
+        double wavenumber_space = child_value<double>(initial_density, "wavenumber_space");
+        double perturbation_density = child_value<double>(initial_density, "perturbation_density");
+        int j = child_value<int>(initial_density, "velocity");
+        int k = child_value<int>(initial_density, "angle");
+        
+        density_.assign(number_of_elements_, 0);
+        
+        for (unsigned i = 0; i < number_of_points_; ++i)
+        {
+            int n = subscript_to_index(i, j, k);
+                
+            density_[n] = flat_density + perturbation_density * sin(M_PI * wavenumber_space * position_[i]);
+        }
+    }
     else if (initial_density_type == "sinosoidal")
     {
         double flat_density = child_value<double>(initial_density, "flat_density");
@@ -263,7 +280,6 @@ initialize_trilinos()
     {
         for (int k = 0; k < number_of_angles_; ++k)
         {
-            int njm = subscript_to_index(i, 0, k);
             int njp = subscript_to_index(i, number_of_velocities_ - 1, k);
 
             number_of_entries_per_row_[njp] = 5;
