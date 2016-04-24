@@ -807,9 +807,6 @@ calculate_density()
             density_[global_elements[l]] = density_[l];
         }
     }
-
-    lhs_->ExtractCopy(&density_[0]);
-
 }
 
 /* 
