@@ -13,15 +13,15 @@
     <point_distance>0.01</point_distance>
   </point_discretization>
   <velocity_discretization>
-    <number_of_velocities>5</number_of_velocities>
-    <velocity_distance>0.01</velocity_distance>
+    <number_of_velocities>50</number_of_velocities>
+    <velocity_distance>0.001</velocity_distance>
   </velocity_discretization>
   <angle_discretization>
     <number_of_angles>64</number_of_angles>
   </angle_discretization>
   <time_discretization>
     <number_of_time_steps>101</number_of_time_steps>
-    <time_step>1</time_step>
+    <time_step>.1</time_step>
     <dump_number>1</dump_number>
   </time_discretization>
   <data>
@@ -38,7 +38,7 @@
       <flat_density>1</flat_density>
       <velocity>2</velocity>
       <perturbation_density>1</perturbation_density>
-      <wavenumber_space>0</wavenumber_space>
+      <wavenumber_space>1</wavenumber_space>
       <wavenumber_angle>1</wavenumber_angle>
     </initial_density>
   </data>
