@@ -266,7 +266,6 @@ initialize_trilinos()
             int njm = subscript_to_index(i, 0, k);
             int njp = subscript_to_index(i, number_of_velocities_ - 1, k);
 
-            number_of_entries_per_row_[njm] = 5;
             number_of_entries_per_row_[njp] = 5;
         }
     }
@@ -294,15 +293,23 @@ initialize_trilinos()
         int nip = subscript_to_index(ip1, j, k);
         int njm = subscript_to_index(i, jm1, k);
         int njp = subscript_to_index(i, jp1, k);
+        if (j == 0)
+        {
+            int kjm = check_angle(k + number_of_angles_ / 2);
+            njm = subscript_to_index(i, j, kjm);
+        }
         int nkm = subscript_to_index(i, j, km1);
         int nkp = subscript_to_index(i, j, kp1);
 
-        int sum = 0;
         if (nim == n)
         {
             number_of_entries_per_row_[n] -= 1;
         }
         if (nip == n)
+        {
+            number_of_entries_per_row_[n] -= 1;
+        }
+        if (njm == n && j != number_of_velocities_ -1)
         {
             number_of_entries_per_row_[n] -= 1;
         }
@@ -433,10 +440,16 @@ fill_matrix()
         int km1 = check_angle(k - 1);
         int kp1 = check_angle(k + 1);
 
+        int kjm = check_angle(k + number_of_angles_ / 2);
+        
         int nim = subscript_to_index(im1, j, k);
         int nip = subscript_to_index(ip1, j, k);
         int njm = subscript_to_index(i, jm1, k);
         int njp = subscript_to_index(i, jp1, k);
+        if (j == 0)
+        {
+            njm = subscript_to_index(i, j, kjm);
+        }
         int nkm = subscript_to_index(i, j, km1);
         int nkp = subscript_to_index(i, j, kp1);
         
@@ -480,8 +493,21 @@ fill_matrix()
 
         // velocity derivative
 
-        if (j == 0 || j == number_of_velocities_ - 1)
+        if (j == number_of_velocities_ - 1)
         {
+            
+        }
+        else if (j == 0)
+        {
+            column_indices.push_back(njp);
+            value = velocity_constant(i, jp1, k) / (2 * velocity_distance_);
+            fill_vector.push_back(value);
+            rhs_sum -= value * density_[njp];
+        
+            column_indices.push_back(njm);
+            value = -velocity_constant(i, j, kjm) / (2 * velocity_distance_);
+            fill_vector.push_back(value);
+            rhs_sum -= value * density_[njm];
             
         }
         else 
@@ -815,7 +841,7 @@ check_velocity(int g)
 {
     if (g < 0)
     {
-        return (-g + number_of_velocities_) % number_of_velocities_;
+        return abs(g) % number_of_velocities_;
     }
     else if (g >= number_of_velocities_)
     {
