@@ -26,7 +26,7 @@ def plot_fields(output_filename):
         electric_field[:,i] = np.fromstring(dumps[i].findtext("electric_field_x"), sep="\t")
 
     # plot electric field and charge density
-        
+    
     x, y = np.meshgrid(time_values, cell_center_positions)
     
     plt.figure()

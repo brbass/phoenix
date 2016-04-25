@@ -203,7 +203,7 @@ parse_xml()
             {
                 int n = subscript_to_index(i, j, k);
                 
-                density_[n] = flat_density + perturbation_density * (sin(M_PI * wavenumber_space * position_[i]) + sin(M_PI * wavenumber_angle * angle_[k]));
+                density_[n] = flat_density + perturbation_density * (sin(M_PI * wavenumber_space * position_[i]) + sin(wavenumber_angle * angle_[k]));
             }
         }
     }
@@ -231,19 +231,9 @@ parse_xml()
         double wavenumber_angle = child_value<double>(initial_density, "wavenumber_angle");
         double wavenumber_velocity = child_value<double>(initial_density, "wavenumber_velocity");
         double perturbation_density = child_value<double>(initial_density, "perturbation_density");
-        int j = child_value<int>(initial_density, "velocity");
         
         density_.assign(number_of_elements_, 0);
 
-        for (unsigned i = 0; i < number_of_points_; ++i)
-        {
-            for (unsigned k = 0; k < number_of_angles_; ++k)
-            {
-                int n = subscript_to_index(i, j, k);
-                    
-                density_[n] = flat_density + perturbation_density * (sin(M_PI * wavenumber_space * position_[i]) + sin(M_PI * wavenumber_angle * angle_[k])) + sin(M_PI * wavenumber_velocity * velocity_[i]);
-            }
-        }
         for (unsigned i = 0; i < number_of_points_; ++i)
         {
             for (unsigned j = 0; j < number_of_velocities_; ++j)
@@ -252,11 +242,10 @@ parse_xml()
                 {
                     int n = subscript_to_index(i, j, k);
                     
-                    density_[n] +=  perturbation_density * sin(M_PI * wavenumber_velocity * velocity_[j]);
+                    density_[n] = flat_density + perturbation_density * (sin(M_PI * wavenumber_space * position_[i]) + sin(M_PI * wavenumber_angle * angle_[k])) + sin(M_PI * wavenumber_velocity * (velocity_[j] - velocity_[0]));
                 }
             }
         }
-                
     }
     else
     {
@@ -979,7 +968,7 @@ dump_xml(int i, double t)
         append_child(dump, magnetic_field_z_, "magnetic_field_z");
         append_child(dump, charge_density_, "charge_density");
         append_child(dump, delta_charge_density_, "delta_charge_density");
-        // append_child(dump, density_, "density");
+        append_child(dump, density_, "density");
         append_child(dump, mean_density_, "mean_density");
     }
 }
