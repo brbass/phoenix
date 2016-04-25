@@ -37,7 +37,7 @@
       <type>sinosoidal_monoenergetic</type>
       <flat_density>100</flat_density>
       <velocity>2</velocity>
-      <perturbation_density>100</perturbation_density>
+      <perturbation_density>1</perturbation_density>
       <wavenumber_space>1</wavenumber_space>
       <wavenumber_angle>0</wavenumber_angle>
     </initial_density>
