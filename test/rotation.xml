@@ -9,15 +9,15 @@
     <print>0</print>
   </solver>
   <point_discretization>
-    <number_of_points>10</number_of_points>
+    <number_of_points>1</number_of_points>
     <point_distance>0.01</point_distance>
   </point_discretization>
   <velocity_discretization>
-    <number_of_velocities>5</number_of_velocities>
-    <velocity_distance>0.1</velocity_distance>
+    <number_of_velocities>1</number_of_velocities>
+    <velocity_distance>0.2</velocity_distance>
   </velocity_discretization>
   <angle_discretization>
-    <number_of_angles>64</number_of_angles>
+    <number_of_angles>256</number_of_angles>
   </angle_discretization>
   <time_discretization>
     <number_of_time_steps>10001</number_of_time_steps>
@@ -36,7 +36,7 @@
     <initial_density>
       <type>sinosoidal_monoenergetic</type>
       <flat_density>1</flat_density>
-      <velocity>2</velocity>
+      <velocity>0</velocity>
       <perturbation_density>1</perturbation_density>
       <wavenumber_space>0</wavenumber_space>
       <wavenumber_angle>1</wavenumber_angle>
