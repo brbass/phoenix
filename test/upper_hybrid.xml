@@ -9,20 +9,20 @@
     <print>0</print>
   </solver>
   <point_discretization>
-    <number_of_points>10</number_of_points>
-    <point_distance>0.1</point_distance>
+    <number_of_points>100</number_of_points>
+    <point_distance>0.01</point_distance>
   </point_discretization>
   <velocity_discretization>
-    <number_of_velocities>10</number_of_velocities>
+    <number_of_velocities>5</number_of_velocities>
     <velocity_distance>0.1</velocity_distance>
   </velocity_discretization>
   <angle_discretization>
     <number_of_angles>16</number_of_angles>
   </angle_discretization>
   <time_discretization>
-    <number_of_time_steps>2001</number_of_time_steps>
-    <time_step>0.01</time_step>
-    <dump_number>20</dump_number>
+    <number_of_time_steps>10001</number_of_time_steps>
+    <time_step>.001</time_step>
+    <dump_number>100</dump_number>
   </time_discretization>
   <data>
     <magnetic_field>
@@ -34,13 +34,12 @@
       <value>0</value>
     </electric_field>
     <initial_density>
-      <type>sinosoidal</type>
-      <flat_density>1</flat_density>
-      <velocity>5</velocity>
-      <perturbation_density>0.01</perturbation_density>
+      <type>sinosoidal_monoenergetic</type>
+      <flat_density>100</flat_density>
+      <velocity>2</velocity>
+      <perturbation_density>1</perturbation_density>
       <wavenumber_space>1</wavenumber_space>
       <wavenumber_angle>0</wavenumber_angle>
-      <wavenumber_velocity>0</wavenumber_velocity>
     </initial_density>
   </data>
 </input>
