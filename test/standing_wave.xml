@@ -13,11 +13,11 @@
     <point_distance>0.01</point_distance>
   </point_discretization>
   <velocity_discretization>
-    <number_of_velocities>50</number_of_velocities>
-    <velocity_distance>0.001</velocity_distance>
+    <number_of_velocities>5</number_of_velocities>
+    <velocity_distance>0.1</velocity_distance>
   </velocity_discretization>
   <angle_discretization>
-    <number_of_angles>64</number_of_angles>
+    <number_of_angles>16</number_of_angles>
   </angle_discretization>
   <time_discretization>
     <number_of_time_steps>101</number_of_time_steps>
@@ -35,11 +35,11 @@
     </electric_field>
     <initial_density>
       <type>sinosoidal_monoenergetic</type>
-      <flat_density>1</flat_density>
+      <flat_density>100</flat_density>
       <velocity>2</velocity>
-      <perturbation_density>1</perturbation_density>
+      <perturbation_density>100</perturbation_density>
       <wavenumber_space>1</wavenumber_space>
-      <wavenumber_angle>1</wavenumber_angle>
+      <wavenumber_angle>0</wavenumber_angle>
     </initial_density>
   </data>
 </input>
