@@ -48,8 +48,31 @@ def plot_fields(output_filename):
     plt.savefig("figures/" + output_filename[0:-8] + "-fields.pdf")
     plt.close()
 
+    # plot angular variable
+
+    if True:
+        number_of_angles = int(output_xml.findtext("data/number_of_angles"))
+        density = np.empty((number_of_angles, number_of_times))
+        angles = np.fromstring(output_xml.findtext("data/angle"), sep="\t")
+        
+        for i in range(len(dumps)):
+            density[:,i] = np.fromstring(dumps[i].findtext("density"), sep="\t")
+
+        x, y = np.meshgrid(time_values, angles)
+        
+        plt.figure()
+        plt.subplot(211)
+        plt.contourf(x, y, density)
+        plt.xlabel("t")
+        plt.ylabel(r"$\gamma$")
+        plt.title(r"$f(\gamma, t)$")
+        plt.colorbar()
+        plt.tight_layout()
+        plt.savefig("figures/" + output_filename[0:-8] + "-angle.pdf")
+        plt.close()
+        
     # plot max density and electric field
-    
+
     if False:
         max_density = [max(charge_density[:,i]) for i in range(len(dumps))]
         max_field = [max(electric_field[:,i]) for i in range(len(dumps))]
@@ -91,18 +114,21 @@ def plot_fields(output_filename):
     # plot fourier electric field
 
     if False:
-        num_modes_x = 10
+        num_modes_x = 5
         num_modes_t = 20
         fourier_electric = np.abs(np.fft.fft2(electric_field))
         fourier_electric = np.fft.fftshift(fourier_electric)
         fourier_electric = fourier_electric[number_of_cells/2:, number_of_times/2:]
         fourier_electric = fourier_electric[0:num_modes_x, 0:num_modes_t]
-        
-        x, y = np.meshgrid(np.arange(num_modes_t), np.arange(num_modes_x))
+
+        tvals = np.arange(num_modes_t)/time_values[-1]
+        xvals = np.arange(num_modes_x)
+        x, y = np.meshgrid(tvals, xvals)
         plt.figure()
+        plt.subplot(211)
         plt.contourf(x, y, fourier_electric)
-        plt.xlabel(r"$k_x$")
-        plt.ylabel(r"$k_t$")
+        plt.xlabel(r"$k_t$")
+        plt.ylabel(r"$k_x$")
         plt.colorbar()
         plt.tight_layout()
         plt.savefig("figures/" + output_filename[0:-8] + "-fourier.pdf")
