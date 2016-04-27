@@ -226,59 +226,7 @@ Of these, only the first (Gauss's law) will be used in this simulation to
 \end_layout
 
 \begin_layout Standard
-The Vlasov equation has been inspected asymptotically in a spherical coordinate
- system with similar variables to the ones used here 
-\begin_inset CommandInset citation
-LatexCommand cite
-key "cheb-terrab-solution-1995"
-
-\end_inset
-
-.
- Various solution methods have been used to solve the Vlasov equation, including
- discontinuous Galerkin methods 
-\begin_inset CommandInset citation
-LatexCommand cite
-key "dios-discontinuous-2012"
-
-\end_inset
-
-, finite volume methods 
-\begin_inset CommandInset citation
-LatexCommand cite
-key "filbet-conservative-2001"
-
-\end_inset
-
- and spherical harmonics expansions 
-\begin_inset CommandInset citation
-LatexCommand cite
-key "rupp-numerical-2009"
-
-\end_inset
-
-.
- Methods based on the method of characteristics have also been explored
- 
-\begin_inset CommandInset citation
-LatexCommand cite
-key "crouseilles-forward-2009"
-
-\end_inset
-
-.
- The Vlasov equations have the same numerical limit as the particle-in-cell
- methods.
- While more expensive to solve, the Vlasov equations don't suffer from the
- same numerical noise as the particle-in-cell methods 
-\begin_inset CommandInset citation
-LatexCommand cite
-key "elkina-new-2006"
-
-\end_inset
-
-.
- 
+The Vlasov equation has been solved in various geometries 
 \end_layout
 
 \begin_layout Section
@@ -465,12 +413,12 @@ tion,
 \begin_inset Formula 
 \begin{multline}
 \nabla_{v}f=\frac{\partial f}{\partial v}\left(\cos\gamma\hat{\bm{x}}+\sin\gamma\hat{\bm{y}}\right)\\
-+\frac{1}{v}\frac{\partial f}{\partial\gamma}\left(-\sin\gamma\hat{\bm{x}}+\cos\gamma\hat{\bm{y}}\right),
++\frac{1}{v}\frac{\partial f}{\partial v}\left(-\sin\gamma\hat{\bm{x}}+\cos\gamma\hat{\bm{y}}\right),
 \end{multline}
 
 \end_inset
 
- to get 
+ to get after simplification, 
 \begin_inset Formula 
 \begin{multline}
 \frac{\partial}{\partial t}f_{s}+v\cos\gamma\frac{\partial}{\partial x}f_{s}+\left[E_{x}\cos\gamma+E_{y}\sin\gamma\right]\frac{\partial}{\partial v}f_{s}\\
@@ -517,8 +465,6 @@ end{subequations}
 \end_inset
 
 As expected, the magnetic field term appears only in the angular derivative.
- This means that the magnetic field cannot directly change the particle
- velocity.
  The boundary conditions are
 \begin_inset ERT
 status open
@@ -668,7 +614,7 @@ name "eq:finite-difference-density"
  
 \begin_inset Formula 
 \begin{equation}
-\frac{2f_{i,g,n}^{\left(\ell+1\right)}}{\Delta t}+h_{i,g,n}^{\left(\ell+1\right)}=\frac{2f_{i,g,n}^{\left(\ell\right)}}{\Delta t}-h_{i,g,n}^{\left(\ell\right)},\label{eq:time-finite-element}
+\frac{2f_{i,g,n}^{\left(\ell+1\right)}}{\Delta t}+h_{i,g,n}^{\left(\ell+1\right)}=\frac{2f_{i,g,n}^{\left(\ell\right)}}{\Delta t}-h_{i,g,n}^{\left(\ell\right)},
 \end{equation}
 
 \end_inset
@@ -717,30 +663,7 @@ end{subequations}
 
 \end_inset
 
-With the equations discretized thus from the conservative equations, a sum
- over 
-\begin_inset Formula $i,g,n$
-\end_inset
 
- of Eq.
- 
-\begin_inset CommandInset ref
-LatexCommand ref
-reference "eq:time-finite-element"
-
-\end_inset
-
- will give an important result,
-\begin_inset Formula 
-\[
-\sum_{i,g,n}f_{i,g,n}^{\left(\ell+1\right)}=\sum_{i,g,n}f_{i,g,n}^{\left(\ell\right)},
-\]
-
-\end_inset
-
-which means that the total number of particles in the simulation is not
- changing in time.
- 
 \end_layout
 
 \begin_layout Standard
@@ -784,9 +707,8 @@ Following this, the deviation from the average perturbation
 \begin_inset Formula $\delta\rho_{i}$
 \end_inset
 
- is calculated.
- Then the electric field is calculated from the finite volume approximation
- to the equation
+ is calculated and the electric field is calculated from the finite volume
+ approximation to
 \begin_inset Formula 
 \begin{equation}
 \frac{\partial}{\partial x}\delta E=\delta\rho,
@@ -794,20 +716,7 @@ Following this, the deviation from the average perturbation
 
 \end_inset
 
-which is found by performing the operation 
-\begin_inset Formula $\int_{i}^{i+1}\left(\cdot\right)dx$
-\end_inset
-
- and interpolating linearly between the endpoints (as with the time discretizati
-on of Eq.
- 
-\begin_inset CommandInset ref
-LatexCommand ref
-reference "eq:time-finite-element"
-
-\end_inset
-
-) to get 
+ which is
 \begin_inset Formula 
 \begin{equation}
 \frac{\delta E_{i+1}-\delta E_{i}}{\Delta x}=\frac{\delta\rho_{i+1}+\delta\rho_{i}}{2}.\label{eq:rho-finite-difference}
@@ -815,10 +724,6 @@ reference "eq:time-finite-element"
 
 \end_inset
 
-
-\end_layout
-
-\begin_layout Standard
 As the deviation from the average electric field 
 \begin_inset Formula $\delta E_{i}$
 \end_inset
@@ -843,8 +748,8 @@ can be used but isn't ideal computationally when used in a sparse matrix
 
 \end_inset
 
-followed by an additive normalization to satisfy the zero-mean condition
- above (as occurred with the charge density).
+followed by an additive normalization to the zero-mean condition above (as
+ occurred with the charge density).
  
 \end_layout
 
@@ -1694,10 +1599,6 @@ B_{z}\left(x\right)=B_{0}.
 
 \end_inset
 
-
-\end_layout
-
-\begin_layout Standard
 The parameters used for the tests can be seen in Table 
 \begin_inset CommandInset ref
 LatexCommand ref
@@ -1706,23 +1607,6 @@ reference "tab:parameters"
 \end_inset
 
 .
- The four tests are
-\end_layout
-
-\begin_layout Itemize
-Standing 1: Standing wave with many directions,
-\end_layout
-
-\begin_layout Itemize
-Standing 2: Standing wave with two directions,
-\end_layout
-
-\begin_layout Itemize
-Upper: Upper hybrid wave with spatial perturbation, and
-\end_layout
-
-\begin_layout Itemize
-Rotation: Rotation of an angular perturbation.
  
 \end_layout
 
@@ -1856,8 +1740,7 @@ The standing wave is a simple sinusoidal wave in the
 \end_inset
 
 .
- Because of this, the standing wave has a wavenumber of 1.0, as would be
- seen in a particle-in-cell code for particles with no initial velocity.
+ Because of this, the standing wave has a wavenumber of 1.0, as expected.
  The standing wave with 16 directions has a lower wavenumber of about 0.8.
  The velocity of the particles in this case is not all directed in the 
 \begin_inset Formula $\hat{\bm{x}}$
@@ -2200,7 +2083,7 @@ The Vlasov code exhibits many of the same behaviors seen in particle-in-cell
 \begin_inset CommandInset bibtex
 LatexCommand bibtex
 bibfiles "ref/bibliography"
-options "unsrt"
+options "plain"
 
 \end_inset
 
